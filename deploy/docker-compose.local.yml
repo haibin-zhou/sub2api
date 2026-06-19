@@ -1,5 +1,5 @@
 # =============================================================================
-# Sub2API Docker Compose - Local Directory Version
+# TokenHut Docker Compose - Local Directory Version
 # =============================================================================
 # This configuration uses local directories for data storage instead of named
 # volumes, making it easy to migrate the entire deployment by simply copying
@@ -21,10 +21,10 @@
 
 services:
   # ===========================================================================
-  # Sub2API Application
+  # TokenHut Application
   # ===========================================================================
   sub2api:
-    image: weishaw/sub2api:latest
+    image: ${TOKENHUT_IMAGE:-weishaw/sub2api:latest}
     container_name: sub2api
     restart: unless-stopped
     ulimits:
@@ -81,7 +81,7 @@ services:
       # =======================================================================
       # Admin Account (auto-created on first run)
       # =======================================================================
-      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@sub2api.local}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@tokenhut.local}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
 
       # =======================================================================

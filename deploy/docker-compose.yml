@@ -1,5 +1,5 @@
 # =============================================================================
-# Sub2API Docker Compose Configuration
+# TokenHut Docker Compose Configuration
 # =============================================================================
 # Quick Start:
 #   1. Copy .env.example to .env and configure
@@ -13,10 +13,10 @@
 
 services:
   # ===========================================================================
-  # Sub2API Application
+  # TokenHut Application
   # ===========================================================================
   sub2api:
-    image: weishaw/sub2api:latest
+    image: ${TOKENHUT_IMAGE:-weishaw/sub2api:latest}
     container_name: sub2api
     restart: unless-stopped
     ulimits:
@@ -77,7 +77,7 @@ services:
       # =======================================================================
       # Admin Account (auto-created on first run)
       # =======================================================================
-      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@sub2api.local}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@tokenhut.local}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD:-}
 
       # =======================================================================
