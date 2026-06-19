@@ -1,7 +1,7 @@
 # =============================================================================
-# TokenHut Docker Compose - Standalone Configuration
+# Habifying Docker Compose - Standalone Configuration
 # =============================================================================
-# This configuration runs only the TokenHut application.
+# This configuration runs only the Habifying application.
 # PostgreSQL and Redis must be provided externally.
 #
 # Usage:

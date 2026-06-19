@@ -62,7 +62,7 @@ func main() {
 	flag.Parse()
 
 	if *showVersion {
-		log.Printf("TokenHut %s (commit: %s, built: %s)\n", Version, Commit, Date)
+		log.Printf("Habifying %s (commit: %s, built: %s)\n", Version, Commit, Date)
 		return
 	}
 
@@ -112,7 +112,7 @@ func runSetupServer() {
 	// This allows users to run setup on a different address if needed
 	addr := config.GetServerAddress()
 	log.Printf("Setup wizard available at http://%s", addr)
-	log.Println("Complete the setup wizard to configure TokenHut")
+	log.Println("Complete the setup wizard to configure Habifying")
 
 	protocols := new(http.Protocols)
 	protocols.SetHTTP1(true)

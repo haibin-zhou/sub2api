@@ -1,5 +1,5 @@
 # =============================================================================
-# TokenHut Multi-Stage Dockerfile
+# Habifying Multi-Stage Dockerfile
 # =============================================================================
 # Stage 1: Build frontend
 # Stage 2: Build Go backend with embedded frontend
@@ -90,7 +90,7 @@ FROM ${ALPINE_IMAGE}
 
 # Labels
 LABEL maintainer="haibin-zhou <github.com/haibin-zhou>"
-LABEL description="TokenHut - AI API Gateway Platform"
+LABEL description="Habifying - AI API Gateway Platform"
 LABEL org.opencontainers.image.source="https://github.com/haibin-zhou/sub2api"
 
 # Install runtime dependencies

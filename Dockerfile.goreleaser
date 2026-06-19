@@ -1,5 +1,5 @@
 # =============================================================================
-# TokenHut Dockerfile for GoReleaser
+# Habifying Dockerfile for GoReleaser
 # =============================================================================
 # This Dockerfile is used by GoReleaser to build Docker images.
 # It only packages the pre-built binary, no compilation needed.
@@ -13,7 +13,7 @@ FROM ${POSTGRES_IMAGE} AS pg-client
 FROM ${ALPINE_IMAGE}
 
 LABEL maintainer="haibin-zhou <github.com/haibin-zhou>"
-LABEL description="TokenHut - AI API Gateway Platform"
+LABEL description="Habifying - AI API Gateway Platform"
 LABEL org.opencontainers.image.source="https://github.com/haibin-zhou/sub2api"
 
 # Install runtime dependencies

@@ -1,6 +1,6 @@
 # Layout Components
 
-Vue 3 layout components for the TokenHut frontend, built with Composition API, TypeScript, and TailwindCSS.
+Vue 3 layout components for the Habifying frontend, built with Composition API, TypeScript, and TailwindCSS.
 
 ## Components
 

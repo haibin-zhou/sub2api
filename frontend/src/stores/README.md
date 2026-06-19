@@ -1,6 +1,6 @@
 # Pinia Stores Documentation
 
-This directory contains all Pinia stores for the TokenHut frontend application.
+This directory contains all Pinia stores for the Habifying frontend application.
 
 ## Stores Overview
 

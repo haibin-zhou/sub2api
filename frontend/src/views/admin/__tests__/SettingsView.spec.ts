@@ -301,7 +301,7 @@ const baseSettingsResponse = {
   default_balance: 0,
   default_concurrency: 1,
   default_subscriptions: [],
-  site_name: "TokenHut",
+  site_name: "Habifying",
   site_logo: "",
   site_subtitle: "",
   api_base_url: "",

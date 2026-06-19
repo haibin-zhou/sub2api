@@ -1,5 +1,5 @@
 # =============================================================================
-# TokenHut Docker Compose Configuration
+# Habifying Docker Compose Configuration
 # =============================================================================
 # Quick Start:
 #   1. Copy .env.example to .env and configure
@@ -13,7 +13,7 @@
 
 services:
   # ===========================================================================
-  # TokenHut Application
+  # Habifying Application
   # ===========================================================================
   sub2api:
     image: ${TOKENHUT_IMAGE:-weishaw/sub2api:latest}

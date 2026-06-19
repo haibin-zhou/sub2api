@@ -1,5 +1,5 @@
 /**
- * API Client for TokenHut Backend
+ * API Client for Habifying Backend
  * Central export point for all API modules
  */
 

@@ -1,5 +1,5 @@
 /**
- * Core Type Definitions for TokenHut Frontend
+ * Core Type Definitions for Habifying Frontend
  */
 
 // ==================== Common Types ====================

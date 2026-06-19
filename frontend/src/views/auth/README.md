@@ -1,6 +1,6 @@
 # Authentication Views
 
-This directory contains Vue 3 authentication views for the TokenHut frontend application.
+This directory contains Vue 3 authentication views for the Habifying frontend application.
 
 ## Components
 

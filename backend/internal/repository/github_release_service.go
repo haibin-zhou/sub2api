@@ -83,7 +83,7 @@ func (c *githubReleaseClient) FetchLatestRelease(ctx context.Context, repo strin
 		return nil, err
 	}
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
-	req.Header.Set("User-Agent", "TokenHut-Updater")
+	req.Header.Set("User-Agent", "Habifying-Updater")
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {

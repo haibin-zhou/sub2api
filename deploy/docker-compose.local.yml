@@ -1,5 +1,5 @@
 # =============================================================================
-# TokenHut Docker Compose - Local Directory Version
+# Habifying Docker Compose - Local Directory Version
 # =============================================================================
 # This configuration uses local directories for data storage instead of named
 # volumes, making it easy to migrate the entire deployment by simply copying
@@ -21,7 +21,7 @@
 
 services:
   # ===========================================================================
-  # TokenHut Application
+  # Habifying Application
   # ===========================================================================
   sub2api:
     image: ${TOKENHUT_IMAGE:-weishaw/sub2api:latest}
