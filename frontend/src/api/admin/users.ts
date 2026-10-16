@@ -4,7 +4,8 @@
  */
 
 import { apiClient } from '../client'
-import type { AdminUser, UpdateUserRequest, PaginatedResponse, ApiKey } from '@/types'
+import { listPlatformIds } from '@/constants/platformCatalog'
+import type { AccountPlatform, AdminUser, UpdateUserRequest, PaginatedResponse, ApiKey } from '@/types'
 
 export interface AdminBindAuthIdentityChannelRequest {
   channel: string
@@ -42,6 +43,17 @@ export interface AdminBoundAuthIdentity {
   created_at: string
   updated_at: string
   channel?: AdminBoundAuthIdentityChannel | null
+}
+
+export interface BatchUpdateUserLimitsRequest {
+  user_ids: number[]
+  all?: boolean
+  concurrency?: number
+  rpm_limit?: number
+}
+
+export interface BatchUpdateUserLimitsResponse {
+  affected: number
 }
 
 /**
@@ -121,6 +133,7 @@ export async function create(userData: {
   password: string
   username?: string
   notes?: string
+  role?: 'admin' | 'user'
   balance?: number
   concurrency?: number
   rpm_limit?: number
@@ -181,6 +194,17 @@ export async function updateBalance(
  */
 export async function updateConcurrency(id: number, concurrency: number): Promise<AdminUser> {
   return update(id, { concurrency })
+}
+
+/** Overwrite concurrency and/or RPM limits for multiple users in one request. */
+export async function batchUpdateLimits(
+  request: BatchUpdateUserLimitsRequest
+): Promise<BatchUpdateUserLimitsResponse> {
+  const { data } = await apiClient.post<BatchUpdateUserLimitsResponse>(
+    '/admin/users/batch-limits',
+    request
+  )
+  return data
 }
 
 /**
@@ -307,7 +331,11 @@ export async function bindUserAuthIdentity(
 /**
  * Platform quota types
  */
-export type PlatformQuotaPlatform = 'anthropic' | 'openai' | 'gemini' | 'antigravity'
+// 与后端 AllowedQuotaPlatforms 同源：平台清单中的全部具体平台。
+export function platformQuotaPlatforms(): PlatformQuotaPlatform[] {
+  return listPlatformIds()
+}
+export type PlatformQuotaPlatform = AccountPlatform
 export type PlatformQuotaWindow = 'daily' | 'weekly' | 'monthly'
 
 export interface PlatformQuotaItem {
@@ -384,6 +412,7 @@ export const usersAPI = {
   delete: deleteUser,
   updateBalance,
   updateConcurrency,
+  batchUpdateLimits,
   toggleStatus,
   getUserApiKeys,
   getUserUsageStats,

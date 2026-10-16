@@ -7,19 +7,25 @@ import (
 	"fmt"
 	"testing"
 	"time"
+
+	dbent "github.com/Wei-Shaw/sub2api/ent"
 )
 
 // fakeInsertRecorder 记录 BulkInsertInitial 调用，实现 UserPlatformQuotaRepository port。
 type fakeInsertRecorder struct {
 	records []UserPlatformQuotaRecord
 	err     error
+	calls   int             // BulkInsertInitial 被调用的次数
+	lastCtx context.Context // 捕获最后一次 BulkInsertInitial 收到的 ctx（用于断言事务隔离）
 }
 
 func (f *fakeInsertRecorder) GetByUserPlatform(_ context.Context, _ int64, _ string) (*UserPlatformQuotaRecord, error) {
 	return nil, nil
 }
 
-func (f *fakeInsertRecorder) BulkInsertInitial(_ context.Context, recs []UserPlatformQuotaRecord) error {
+func (f *fakeInsertRecorder) BulkInsertInitial(ctx context.Context, recs []UserPlatformQuotaRecord) error {
+	f.calls++
+	f.lastCtx = ctx
 	if f.err != nil {
 		return f.err
 	}
@@ -47,33 +53,101 @@ func (f *fakeInsertRecorder) BatchSnapshotUsage(_ context.Context, _ []UserPlatf
 	return nil
 }
 
+// TestSnapshotPlatformQuotaDefaults_PassesToRepoBulkInsert 锁定不变式：只有至少配置了一档限额的
+// 平台才建行；三档全空（含 nil 条目）的平台不进入 BulkInsertInitial。
 func TestSnapshotPlatformQuotaDefaults_PassesToRepoBulkInsert(t *testing.T) {
+	fakeRepo := &fakeInsertRecorder{}
+	s := &AuthService{userPlatformQuotaRepo: fakeRepo}
+
+	five := 5.0
+	zero := 0.0
+	plan := &signupGrantPlan{
+		PlatformQuotas: map[string]*DefaultPlatformQuotaSetting{
+			"anthropic":   {DailyLimitUSD: &five},
+			"grok":        {MonthlyLimitUSD: &zero}, // 0 = 显式禁用，属于已配置
+			"openai":      {},
+			"gemini":      {},
+			"antigravity": nil,
+		},
+	}
+	if err := s.snapshotPlatformQuotaDefaults(context.Background(), 999, plan); err != nil {
+		t.Fatal(err)
+	}
+	if len(fakeRepo.records) != 2 {
+		t.Fatalf("expected 2 records (anthropic, grok), got %d: %+v", len(fakeRepo.records), fakeRepo.records)
+	}
+	byPlatform := map[string]UserPlatformQuotaRecord{}
+	for _, r := range fakeRepo.records {
+		if r.UserID != 999 {
+			t.Errorf("unexpected user id %d", r.UserID)
+		}
+		byPlatform[r.Platform] = r
+	}
+	if r, ok := byPlatform["anthropic"]; !ok || r.DailyLimitUSD == nil || *r.DailyLimitUSD != 5 {
+		t.Error("anthropic daily = 5 not snapshotted")
+	}
+	if r, ok := byPlatform["grok"]; !ok || r.MonthlyLimitUSD == nil || *r.MonthlyLimitUSD != 0 {
+		t.Error("grok monthly = 0 (explicit disable) must be snapshotted")
+	}
+	for _, p := range []string{"openai", "gemini", "antigravity"} {
+		if _, ok := byPlatform[p]; ok {
+			t.Errorf("platform %q has no configured limit and must not get a row", p)
+		}
+	}
+}
+
+// TestSnapshotPlatformQuotaDefaults_AllUnlimitedSkipsInsert 锁定：没有任何平台配置限额时，
+// 不调用 BulkInsertInitial（不产生全空的占位行）。
+func TestSnapshotPlatformQuotaDefaults_AllUnlimitedSkipsInsert(t *testing.T) {
+	fakeRepo := &fakeInsertRecorder{}
+	s := &AuthService{userPlatformQuotaRepo: fakeRepo}
+
+	plan := &signupGrantPlan{
+		PlatformQuotas: map[string]*DefaultPlatformQuotaSetting{
+			"anthropic": {},
+			"openai":    {},
+			"gemini":    nil,
+		},
+	}
+	if err := s.snapshotPlatformQuotaDefaults(context.Background(), 999, plan); err != nil {
+		t.Fatal(err)
+	}
+	if fakeRepo.calls != 0 {
+		t.Fatalf("BulkInsertInitial must not be called when no platform has a configured limit, got %d calls", fakeRepo.calls)
+	}
+	if len(fakeRepo.records) != 0 {
+		t.Errorf("expected no records, got %d", len(fakeRepo.records))
+	}
+}
+
+// TestSnapshotPlatformQuotaDefaults_DetachesCallerTransaction 锁定 fix① 不变量：
+// 平台配额快照是 best-effort，必须脱离调用方事务执行——这样它失败（例如某平台
+// 违反 user_platform_quotas 的 CHECK 约束）也不会把调用方的注册主事务标记为 aborted。
+// 历史 bug：snapshot 在 OAuth pending handler 的 binding tx 中执行，grok 违约毒化整个
+// 事务 → consumePendingOAuthBrowserSessionTx 撞 "transaction aborted" → 500 → 清 cookie → 404。
+func TestSnapshotPlatformQuotaDefaults_DetachesCallerTransaction(t *testing.T) {
 	fakeRepo := &fakeInsertRecorder{}
 	s := &AuthService{userPlatformQuotaRepo: fakeRepo}
 
 	five := 5.0
 	plan := &signupGrantPlan{
 		PlatformQuotas: map[string]*DefaultPlatformQuotaSetting{
-			"anthropic":   {DailyLimitUSD: &five},
-			"openai":      {},
-			"gemini":      {},
-			"antigravity": {},
+			"anthropic": {DailyLimitUSD: &five},
 		},
 	}
-	if err := s.snapshotPlatformQuotaDefaults(context.Background(), 999, plan); err != nil {
-		t.Fatal(err)
+
+	// 模拟调用方（OAuth pending handler）在事务 ctx 中调用快照
+	txCtx := dbent.NewTxContext(context.Background(), &dbent.Tx{})
+
+	if err := s.snapshotPlatformQuotaDefaults(txCtx, 999, plan); err != nil {
+		t.Fatalf("snapshot should not error (fail-open): %v", err)
 	}
-	if len(fakeRepo.records) != 4 {
-		t.Errorf("expected 4 records, got %d", len(fakeRepo.records))
+
+	if fakeRepo.lastCtx == nil {
+		t.Fatal("expected BulkInsertInitial to be called")
 	}
-	found := false
-	for _, r := range fakeRepo.records {
-		if r.UserID == 999 && r.Platform == "anthropic" && r.DailyLimitUSD != nil && *r.DailyLimitUSD == 5 {
-			found = true
-		}
-	}
-	if !found {
-		t.Error("anthropic daily = 5 not snapshotted")
+	if dbent.TxFromContext(fakeRepo.lastCtx) != nil {
+		t.Error("快照必须脱离调用方事务执行（best-effort，失败不得毒化注册事务），但 repo 收到了仍携带事务的 ctx")
 	}
 }
 

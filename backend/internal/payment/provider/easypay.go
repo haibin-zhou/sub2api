@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/Wei-Shaw/sub2api/internal/payment"
 )
@@ -37,6 +38,12 @@ type EasyPay struct {
 	instanceID string
 	config     map[string]string
 	httpClient *http.Client
+}
+
+type easyPayCustomMethod struct {
+	Type         string `json:"type"`
+	UpstreamType string `json:"upstreamType"`
+	DisplayName  string `json:"displayName"`
 }
 
 // NewEasyPay creates a new EasyPay provider.
@@ -95,7 +102,13 @@ func (e *EasyPay) apiBase() string {
 func (e *EasyPay) Name() string        { return "EasyPay" }
 func (e *EasyPay) ProviderKey() string { return payment.TypeEasyPay }
 func (e *EasyPay) SupportedTypes() []payment.PaymentType {
-	return []payment.PaymentType{payment.TypeAlipay, payment.TypeWxpay}
+	types := []payment.PaymentType{payment.TypeAlipay, payment.TypeWxpay}
+	for _, method := range e.customMethods() {
+		if method.Type != "" {
+			types = append(types, method.Type)
+		}
+	}
+	return types
 }
 
 func (e *EasyPay) MerchantIdentityMetadata() map[string]string {
@@ -124,13 +137,14 @@ func (e *EasyPay) CreatePayment(ctx context.Context, req payment.CreatePaymentRe
 // TradeNo is empty; it arrives via the notify callback after payment.
 func (e *EasyPay) createRedirectPayment(req payment.CreatePaymentRequest) (*payment.CreatePaymentResponse, error) {
 	notifyURL, returnURL := e.resolveURLs(req)
+	paymentType := e.upstreamPaymentType(req.PaymentType)
 	params := map[string]string{
-		"pid": e.config["pid"], "type": req.PaymentType,
+		"pid": e.config["pid"], "type": paymentType,
 		"out_trade_no": req.OrderID, "notify_url": notifyURL,
 		"return_url": returnURL, "name": req.Subject,
 		"money": req.Amount,
 	}
-	if cid := e.resolveCID(req.PaymentType); cid != "" {
+	if cid := e.resolveCID(paymentType); cid != "" {
 		params["cid"] = cid
 	}
 	if req.IsMobile {
@@ -150,13 +164,14 @@ func (e *EasyPay) createRedirectPayment(req payment.CreatePaymentRequest) (*paym
 // createAPIPayment calls mapi.php to get payurl/qrcode (existing behavior).
 func (e *EasyPay) createAPIPayment(ctx context.Context, req payment.CreatePaymentRequest) (*payment.CreatePaymentResponse, error) {
 	notifyURL, returnURL := e.resolveURLs(req)
+	paymentType := e.upstreamPaymentType(req.PaymentType)
 	params := map[string]string{
-		"pid": e.config["pid"], "type": req.PaymentType,
+		"pid": e.config["pid"], "type": paymentType,
 		"out_trade_no": req.OrderID, "notify_url": notifyURL,
 		"return_url": returnURL, "name": req.Subject,
 		"money": req.Amount, "clientip": req.ClientIP,
 	}
-	if cid := e.resolveCID(req.PaymentType); cid != "" {
+	if cid := e.resolveCID(paymentType); cid != "" {
 		params["cid"] = cid
 	}
 	if req.IsMobile {
@@ -187,7 +202,53 @@ func (e *EasyPay) createAPIPayment(ctx context.Context, req payment.CreatePaymen
 	if req.IsMobile && resp.PayURL2 != "" {
 		payURL = resp.PayURL2
 	}
-	return &payment.CreatePaymentResponse{TradeNo: resp.TradeNo, PayURL: payURL, QRCode: resp.QRCode}, nil
+	base := e.apiBase()
+	return &payment.CreatePaymentResponse{
+		TradeNo: resp.TradeNo,
+		PayURL:  resolveEasyPayReturnedRef(base, payURL),
+		QRCode:  resolveEasyPayReturnedRef(base, resp.QRCode),
+	}, nil
+}
+
+// resolveEasyPayReturnedRef absolutizes a payurl/payurl2/qrcode reference that
+// mapi.php returned, resolving it against the instance's configured apiBase.
+//
+// EasyPay-compatible upstreams disagree on this field: some answer with a full
+// checkout URL, others with a site-root-relative path such as
+// "/api/pay/toapp/<order>". createRedirectPayment already builds an absolute URL
+// itself (apiBase + "/submit.php?..."), but the mapi.php branch stored whatever
+// came back verbatim, and nothing downstream repairs it —
+// sanitizeCreatePaymentResponseDetails only strips NUL bytes before the value is
+// persisted to pay_url/qr_code. The frontend then feeds qr_code straight into
+// QRCode.toCanvas (PaymentQRCodeView.renderQR), so a relative path becomes a QR
+// whose payload is a bare path: WeChat renders it as text, and pay_url resolves
+// against the gateway's own domain and 404s.
+//
+// That is precisely the outcome the Alipay provider already refuses to produce —
+// "Setting it as QRCode would let the frontend render an unscannable image"
+// (createPagePayTrade) — so EasyPay is brought in line with the same rule.
+//
+// Only references beginning with "/" are resolved. Anything carrying a scheme is
+// already actionable and is returned untouched, which covers both absolute
+// https:// checkout URLs and app deep links (weixin://, wxp://, alipays://). A
+// reference without a leading slash is left alone as well: QR payloads are
+// frequently opaque tokens rather than paths, and rewriting "OrderToken123" into
+// "<apiBase>/OrderToken123" would break a payload that works today — strictly
+// worse than the bug this fixes.
+func resolveEasyPayReturnedRef(apiBase, ref string) string {
+	trimmed := strings.TrimSpace(ref)
+	if !strings.HasPrefix(trimmed, "/") {
+		return ref
+	}
+	base, err := url.Parse(strings.TrimSpace(apiBase))
+	if err != nil || base.Scheme == "" || base.Host == "" {
+		return ref
+	}
+	parsed, err := url.Parse(trimmed)
+	if err != nil || parsed.Scheme != "" {
+		return ref
+	}
+	return base.ResolveReference(parsed).String()
 }
 
 // resolveURLs returns (notifyURL, returnURL) preferring request values,
@@ -202,6 +263,41 @@ func (e *EasyPay) resolveURLs(req payment.CreatePaymentRequest) (string, string)
 		returnURL = e.config["returnUrl"]
 	}
 	return notifyURL, returnURL
+}
+
+func (e *EasyPay) customMethods() []easyPayCustomMethod {
+	if e == nil {
+		return nil
+	}
+	raw := strings.TrimSpace(e.config["customMethods"])
+	if raw == "" {
+		return nil
+	}
+	var methods []easyPayCustomMethod
+	if err := json.Unmarshal([]byte(raw), &methods); err != nil {
+		return nil
+	}
+	result := make([]easyPayCustomMethod, 0, len(methods))
+	for _, method := range methods {
+		method.Type = strings.TrimSpace(method.Type)
+		method.UpstreamType = strings.TrimSpace(method.UpstreamType)
+		method.DisplayName = strings.TrimSpace(method.DisplayName)
+		if method.Type == "" || method.UpstreamType == "" {
+			continue
+		}
+		result = append(result, method)
+	}
+	return result
+}
+
+func (e *EasyPay) upstreamPaymentType(paymentType string) string {
+	paymentType = strings.TrimSpace(paymentType)
+	for _, method := range e.customMethods() {
+		if paymentType == method.Type {
+			return method.UpstreamType
+		}
+	}
+	return paymentType
 }
 
 func (e *EasyPay) QueryOrder(ctx context.Context, tradeNo string) (*payment.QueryOrderResponse, error) {
@@ -280,6 +376,9 @@ func (e *EasyPay) VerifyNotification(_ context.Context, rawBody string, _ map[st
 	// url.ParseQuery already decodes values — no additional decode needed.
 	params := make(map[string]string)
 	for k := range values {
+		if !easyPayNotifyAllowedParams[k] {
+			return nil, fmt.Errorf("unexpected notify param: %s", k)
+		}
 		params[k] = values.Get(k)
 	}
 	sign := params["sign"]
@@ -428,7 +527,11 @@ func summarizeEasyPayResponse(body []byte) string {
 		return "<empty>"
 	}
 	if len(summary) > maxEasypayErrorSummary {
-		return summary[:maxEasypayErrorSummary] + "..."
+		truncated := summary[:maxEasypayErrorSummary]
+		for len(truncated) > 0 && !utf8.ValidString(truncated) {
+			truncated = truncated[:len(truncated)-1]
+		}
+		return truncated + "..."
 	}
 	return summary
 }
@@ -500,4 +603,27 @@ func easyPaySign(params map[string]string, pkey string) string {
 
 func easyPayVerifySign(params map[string]string, pkey string, sign string) bool {
 	return hmac.Equal([]byte(easyPaySign(params, pkey)), []byte(sign))
+}
+
+// easyPayNotifyAllowedParams is the exact parameter set a genuine EasyPay
+// (彩虹易支付-compatible) async notification carries. Order-creation-only
+// fields (notify_url, return_url, cid, device, clientip, ...) must never
+// appear in a callback: because the sign base string concatenates values
+// unescaped, a signed order URL whose return_url embeds e.g.
+// "trade_status=TRADE_SUCCESS" could otherwise be replayed as a forged
+// payment-success notification (issue #7881). Rejecting unknown keys closes
+// the whole smuggling class; genuinely paid orders rejected by an exotic
+// upstream variant are still recovered by the upstream QueryOrder reconcile
+// path.
+var easyPayNotifyAllowedParams = map[string]bool{
+	"pid":          true,
+	"trade_no":     true,
+	"out_trade_no": true,
+	"type":         true,
+	"name":         true,
+	"money":        true,
+	"trade_status": true,
+	"param":        true,
+	"sign":         true,
+	"sign_type":    true,
 }
