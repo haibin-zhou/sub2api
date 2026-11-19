@@ -90,3 +90,23 @@ describe('AppSidebar MCP entry', () => {
     expect(componentSource).not.toMatch(/path: '\/settings\/mcp'[^\n]*PluginIcon/)
   })
 })
+
+describe('AppSidebar hidden admin entries', () => {
+  it('skips hidden items before feature flags and simple-mode filtering', () => {
+    expect(componentSource).toMatch(/if \(item\.hidden\) continue\n\s*if \(item\.featureFlag && item\.featureFlag\(\) === false\) continue/)
+  })
+
+  it('hides Channel Management, Redeem Codes and Promo Codes from the admin menu', () => {
+    expect(componentSource).toMatch(/path: '\/admin\/channels',\n\s*label: t\('nav\.channelManagement'\),\n\s*icon: ChannelIcon,\n\s*hideInSimpleMode: true,\n\s*hidden: true,/)
+    expect(componentSource).toMatch(/path: '\/admin\/redeem'[^\n]*hidden: true/)
+    expect(componentSource).toMatch(/path: '\/admin\/promo-codes'[^\n]*hidden: true/)
+  })
+
+  it('hides the self-service Channel Status entry (My Account and regular users)', () => {
+    expect(componentSource).toMatch(/path: '\/monitor'[^\n]*hidden: true/)
+  })
+
+  it('keeps the user-side Redeem entry visible', () => {
+    expect(componentSource).toMatch(/path: '\/redeem'(?![^\n]*hidden: true)/)
+  })
+})
