@@ -91,7 +91,12 @@
   </div>
 
   <!-- Default Home Page: Goreach landing -->
-  <GoreachLanding v-else :is-authenticated="isAuthenticated" :dashboard-path="dashboardPath" />
+  <GoreachLanding
+    v-else
+    :is-authenticated="isAuthenticated"
+    :dashboard-path="dashboardPath"
+    :site-logo="siteLogo"
+  />
 </template>
 
 <script setup lang="ts">

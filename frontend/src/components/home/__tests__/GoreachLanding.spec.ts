@@ -3,7 +3,7 @@ import { mount, RouterLinkStub } from '@vue/test-utils'
 
 import GoreachLanding from '../GoreachLanding.vue'
 
-function mountLanding(props: { isAuthenticated: boolean; dashboardPath: string }) {
+function mountLanding(props: { isAuthenticated: boolean; dashboardPath: string; siteLogo?: string }) {
   return mount(GoreachLanding, {
     props,
     global: {
@@ -18,6 +18,22 @@ function linkTargets(wrapper: ReturnType<typeof mountLanding>, selector?: string
 }
 
 describe('GoreachLanding', () => {
+  describe('brand logo', () => {
+    it('shows the configured site logo in the nav brand', () => {
+      const logo = 'data:image/svg+xml;base64,PHN2Zy8+'
+      const wrapper = mountLanding({ isAuthenticated: false, dashboardPath: '/dashboard', siteLogo: logo })
+      const img = wrapper.get('header.nav .brand img.brand-logo')
+      expect(img.attributes('src')).toBe(logo)
+      expect(wrapper.find('header.nav .brand .brand-mark').exists()).toBe(false)
+    })
+
+    it('falls back to the built-in mark when no site logo is configured', () => {
+      const wrapper = mountLanding({ isAuthenticated: false, dashboardPath: '/dashboard' })
+      expect(wrapper.find('header.nav .brand img').exists()).toBe(false)
+      expect(wrapper.find('header.nav .brand .brand-mark').exists()).toBe(true)
+    })
+  })
+
   describe('guest', () => {
     const wrapper = mountLanding({ isAuthenticated: false, dashboardPath: '/dashboard' })
 

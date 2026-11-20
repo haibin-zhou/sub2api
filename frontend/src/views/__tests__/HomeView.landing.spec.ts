@@ -73,8 +73,15 @@ describe('HomeView default mode (Goreach landing)', () => {
     const landing = wrapper.findComponent(GoreachLanding)
 
     expect(landing.exists()).toBe(true)
-    expect(landing.props()).toEqual({ isAuthenticated: false, dashboardPath: '/dashboard' })
+    expect(landing.props()).toEqual({ isAuthenticated: false, dashboardPath: '/dashboard', siteLogo: '' })
     expect(wrapper.find('[data-testid="compact-home"]').exists()).toBe(false)
+  })
+
+  it('passes the configured site logo to GoreachLanding', () => {
+    const logo = 'data:image/svg+xml;base64,PHN2Zy8+'
+    const wrapper = mountHome({ site_logo: logo })
+
+    expect(wrapper.findComponent(GoreachLanding).props('siteLogo')).toBe(logo)
   })
 
   it('passes the admin dashboard path to authenticated administrators', () => {
@@ -82,14 +89,14 @@ describe('HomeView default mode (Goreach landing)', () => {
     authStore.isAdmin = true
 
     const landing = mountHome({ compact_home_enabled: false }).findComponent(GoreachLanding)
-    expect(landing.props()).toEqual({ isAuthenticated: true, dashboardPath: '/admin/dashboard' })
+    expect(landing.props()).toEqual({ isAuthenticated: true, dashboardPath: '/admin/dashboard', siteLogo: '' })
   })
 
   it('passes the user dashboard path to authenticated users', () => {
     authStore.isAuthenticated = true
 
     const landing = mountHome().findComponent(GoreachLanding)
-    expect(landing.props()).toEqual({ isAuthenticated: true, dashboardPath: '/dashboard' })
+    expect(landing.props()).toEqual({ isAuthenticated: true, dashboardPath: '/dashboard', siteLogo: '' })
   })
 
   it('still checks auth and loads public settings on mount', () => {

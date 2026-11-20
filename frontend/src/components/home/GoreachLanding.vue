@@ -3,7 +3,12 @@
     <header class="nav">
       <div class="wrap">
         <router-link class="brand" to="/home" aria-label="Goreach 首页"
-          ><span class="brand-mark" aria-hidden="true"></span>Goreach</router-link
+          ><img v-if="siteLogo" class="brand-logo" :src="siteLogo" alt="" aria-hidden="true" /><span
+            v-else
+            class="brand-mark"
+            aria-hidden="true"
+          ></span
+          >Goreach</router-link
         >
         <nav class="nav-links" aria-label="页面导航">
           <a href="#compare">风险对比</a>
@@ -264,10 +269,15 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 
-defineProps<{
-  isAuthenticated: boolean
-  dashboardPath: string
-}>()
+withDefaults(
+  defineProps<{
+    isAuthenticated: boolean
+    dashboardPath: string
+    /** 后台「站点 Logo」（已经过 sanitizeUrl）；为空时显示内置的简易标记 */
+    siteLogo?: string
+  }>(),
+  { siteLogo: '' },
+)
 
 const rootEl = ref<HTMLElement | null>(null)
 
@@ -454,6 +464,13 @@ section[id] {
   text-decoration: none;
   font: 700 19px/1 var(--latin);
   letter-spacing: -0.01em;
+}
+.brand-logo {
+  display: block;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  object-fit: contain;
 }
 .brand-mark {
   width: 26px;
