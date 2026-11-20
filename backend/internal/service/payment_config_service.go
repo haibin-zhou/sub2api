@@ -71,6 +71,8 @@ type PaymentConfig struct {
 	LoadBalanceStrategy  string `json:"load_balance_strategy"`
 	ProductNamePrefix    string `json:"product_name_prefix"`
 	ProductNameSuffix    string `json:"product_name_suffix"`
+	// SiteName 后台配置的站点名称，用作支付商品名的品牌兜底（无前后缀配置时）；不对外序列化。
+	SiteName string `json:"-"`
 	HelpImageURL         string `json:"help_image_url"`
 	HelpText             string `json:"help_text"`
 	StripePublishableKey string `json:"stripe_publishable_key,omitempty"`
@@ -231,7 +233,7 @@ func (s *PaymentConfigService) GetPaymentConfig(ctx context.Context) (*PaymentCo
 		SettingDailyRechargeLimit, SettingOrderTimeoutMinutes, SettingMaxPendingOrders,
 		SettingEnabledPaymentTypes, SettingBalancePayDisabled, SettingBalanceRechargeMult, SettingSubscriptionUSDToCNYRate, SettingRechargeFeeRate, SettingLoadBalanceStrategy,
 		SettingRechargeBonusTiers, SettingRechargeBonusMode, SettingRechargeBonusNotice,
-		SettingProductNamePrefix, SettingProductNameSuffix,
+		SettingProductNamePrefix, SettingProductNameSuffix, SettingKeySiteName,
 		SettingHelpImageURL, SettingHelpText,
 		SettingCancelRateLimitOn, SettingCancelRateLimitMax,
 		SettingCancelWindowSize, SettingCancelWindowUnit, SettingCancelWindowMode,
@@ -266,6 +268,7 @@ func (s *PaymentConfigService) parsePaymentConfig(vals map[string]string) *Payme
 		LoadBalanceStrategy:       vals[SettingLoadBalanceStrategy],
 		ProductNamePrefix:         vals[SettingProductNamePrefix],
 		ProductNameSuffix:         vals[SettingProductNameSuffix],
+		SiteName:                  resolveSiteName(vals[SettingKeySiteName]),
 		HelpImageURL:              vals[SettingHelpImageURL],
 		HelpText:                  vals[SettingHelpText],
 

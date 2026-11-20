@@ -20,9 +20,16 @@ describe('resolveDocumentTitle', () => {
     expect(resolveDocumentTitle(undefined, 'My Site')).toBe('My Site')
   })
 
+  it('使用后台配置的站点名称（去除首尾空白）', () => {
+    expect(resolveDocumentTitle('Dashboard', 'goreach.es')).toBe('Dashboard - goreach.es')
+    expect(resolveDocumentTitle(undefined, '  goreach.es  ')).toBe('goreach.es')
+    expect(resolveDocumentTitle('Dashboard', 'goreach.es')).not.toContain('Habifying')
+  })
+
   it('站点名为空时，回退默认站点名', () => {
-    expect(resolveDocumentTitle('Dashboard', '')).toBe('Dashboard - Habifying')
-    expect(resolveDocumentTitle(undefined, '   ')).toBe('Habifying')
+    expect(resolveDocumentTitle('Dashboard', '')).toBe('Dashboard - Sub2API')
+    expect(resolveDocumentTitle(undefined, '   ')).toBe('Sub2API')
+    expect(resolveDocumentTitle('Dashboard', undefined)).toBe('Dashboard - Sub2API')
   })
 
   it('站点名变更时仅影响后续路由标题计算', () => {

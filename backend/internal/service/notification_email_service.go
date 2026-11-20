@@ -572,11 +572,11 @@ func (s *NotificationEmailService) runtimeVariables(ctx context.Context, event, 
 
 func (s *NotificationEmailService) siteName(ctx context.Context) string {
 	if s == nil || s.settingRepo == nil {
-		return defaultSiteName
+		return DefaultSiteName
 	}
 	name, err := s.settingRepo.GetValue(ctx, SettingKeySiteName)
 	if err != nil || strings.TrimSpace(name) == "" {
-		return defaultSiteName
+		return DefaultSiteName
 	}
 	return strings.TrimSpace(name)
 }
@@ -898,7 +898,7 @@ func isSafeNotificationEmailURL(raw string) bool {
 func notificationEmailSampleVariables(locale string) map[string]string {
 	if normalizeNotificationLocale(locale) == notificationEmailLocaleChinese {
 		variables := map[string]string{
-			"site_name":           defaultSiteName,
+			"site_name":           DefaultSiteName,
 			"recipient_name":      "张三",
 			"recipient_email":     "user@example.com",
 			"verification_code":   "123456",
@@ -946,7 +946,7 @@ func notificationEmailSampleVariables(locale string) map[string]string {
 		return variables
 	}
 	variables := map[string]string{
-		"site_name":           defaultSiteName,
+		"site_name":           DefaultSiteName,
 		"recipient_name":      "Alex",
 		"recipient_email":     "user@example.com",
 		"verification_code":   "123456",

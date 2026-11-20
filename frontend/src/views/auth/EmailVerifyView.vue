@@ -181,6 +181,7 @@
 import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { DEFAULT_SITE_NAME } from '@/utils/branding'
 import { AuthLayout } from '@/components/layout'
 import Icon from '@/components/icons/Icon.vue'
 import TurnstileWidget from '@/components/CaptchaChallenge.vue'
@@ -270,7 +271,7 @@ const aliyunCaptchaEnabled = ref<boolean>(false)
 const aliyunCaptchaSceneId = ref<string>('')
 const aliyunCaptchaPrefix = ref<string>('')
 const aliyunCaptchaRegion = ref<string>('cn')
-const siteName = ref<string>('Habifying')
+const siteName = ref<string>(DEFAULT_SITE_NAME)
 const registrationEmailSuffixWhitelist = ref<string[]>([])
 // 域名限量注册开关：开启时非白名单域名可注册 1 个账户（由后端判定），前端不做白名单预检。
 const emailDomainQuotaEnabled = ref<boolean>(false)
@@ -372,7 +373,7 @@ onMounted(async () => {
     aliyunCaptchaSceneId.value = settings.aliyun_captcha_scene_id || ''
     aliyunCaptchaPrefix.value = settings.aliyun_captcha_prefix || ''
     aliyunCaptchaRegion.value = settings.aliyun_captcha_region || 'cn'
-    siteName.value = settings.site_name || 'Habifying'
+    siteName.value = settings.site_name || DEFAULT_SITE_NAME
     registrationEmailSuffixWhitelist.value = normalizeRegistrationEmailSuffixWhitelist(
       settings.registration_email_suffix_whitelist || []
     )

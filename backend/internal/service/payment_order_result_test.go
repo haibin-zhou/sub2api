@@ -361,8 +361,65 @@ func TestBuildPaymentSubjectAppliesAffixToSubscriptionPlanDefaultName(t *testing
 	plan := &dbent.SubscriptionPlan{Name: "Team Monthly"}
 
 	got := svc.buildPaymentSubject(plan, 0, cfg, nil)
-	if got != "PRE Habifying Subscription Team Monthly SUF" {
-		t.Fatalf("buildPaymentSubject() = %q, want %q", got, "PRE Habifying Subscription Team Monthly SUF")
+	if got != "PRE Sub2API Subscription Team Monthly SUF" {
+		t.Fatalf("buildPaymentSubject() = %q, want %q", got, "PRE Sub2API Subscription Team Monthly SUF")
+	}
+}
+
+func TestBuildPaymentSubjectUsesConfiguredSiteNameForSubscriptionPlanDefaultName(t *testing.T) {
+	t.Parallel()
+
+	svc := &PaymentService{}
+	plan := &dbent.SubscriptionPlan{Name: "Team Monthly"}
+
+	got := svc.buildPaymentSubject(plan, 0, &PaymentConfig{SiteName: "goreach.es"}, nil)
+	if got != "goreach.es Subscription Team Monthly" {
+		t.Fatalf("buildPaymentSubject() = %q, want %q", got, "goreach.es Subscription Team Monthly")
+	}
+
+	// 前后缀配置仍然生效，品牌部分取站点名称
+	got = svc.buildPaymentSubject(plan, 0, &PaymentConfig{SiteName: "goreach.es", ProductNamePrefix: "PRE"}, nil)
+	if got != "PRE goreach.es Subscription Team Monthly" {
+		t.Fatalf("buildPaymentSubject() = %q, want %q", got, "PRE goreach.es Subscription Team Monthly")
+	}
+}
+
+func TestBuildPaymentSubjectBalanceRechargeUsesSiteNameAndPrefixStillWins(t *testing.T) {
+	t.Parallel()
+
+	svc := &PaymentService{}
+
+	got := svc.buildPaymentSubject(nil, 100, &PaymentConfig{SiteName: "goreach.es"}, nil)
+	if got != "goreach.es 100.00 CNY" {
+		t.Fatalf("buildPaymentSubject() = %q, want %q", got, "goreach.es 100.00 CNY")
+	}
+
+	got = svc.buildPaymentSubject(nil, 100, &PaymentConfig{}, nil)
+	if got != "Sub2API 100.00 CNY" {
+		t.Fatalf("buildPaymentSubject() fallback = %q, want %q", got, "Sub2API 100.00 CNY")
+	}
+
+	got = svc.buildPaymentSubject(nil, 100, nil, nil)
+	if got != "Sub2API 100.00 CNY" {
+		t.Fatalf("buildPaymentSubject() nil cfg = %q, want %q", got, "Sub2API 100.00 CNY")
+	}
+
+	// 配置了商品名前缀时，前缀优先于站点名称（保持原有行为）
+	got = svc.buildPaymentSubject(nil, 100, &PaymentConfig{SiteName: "goreach.es", ProductNamePrefix: "Goreach Credit"}, nil)
+	if got != "Goreach Credit 100.00" {
+		t.Fatalf("buildPaymentSubject() with prefix = %q, want %q", got, "Goreach Credit 100.00")
+	}
+}
+
+func TestParsePaymentConfigLoadsSiteName(t *testing.T) {
+	t.Parallel()
+
+	svc := &PaymentConfigService{}
+	if got := svc.parsePaymentConfig(map[string]string{SettingKeySiteName: " goreach.es "}).SiteName; got != "goreach.es" {
+		t.Fatalf("parsePaymentConfig().SiteName = %q, want %q", got, "goreach.es")
+	}
+	if got := svc.parsePaymentConfig(map[string]string{}).SiteName; got != DefaultSiteName {
+		t.Fatalf("parsePaymentConfig().SiteName fallback = %q, want %q", got, DefaultSiteName)
 	}
 }
 

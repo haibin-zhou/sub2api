@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/Wei-Shaw/sub2api/internal/domain"
 )
@@ -763,3 +764,15 @@ const AdminAPIKeyPrefix = "admin-"
 // SettingKeyAllowUserViewErrorRequests controls whether end users can view
 // their own failed requests on the usage page. Default false (opt-in).
 const SettingKeyAllowUserViewErrorRequests = "allow_user_view_error_requests"
+
+// DefaultSiteName 是未配置站点名称（SettingKeySiteName）时对外展示的中性品牌名。
+// 各部署的产品品牌一律以后台「站点名称」为准，这里只作兜底，全包共用此常量。
+const DefaultSiteName = "Sub2API"
+
+// resolveSiteName 规范化站点名称：去除首尾空白，空值回退到 DefaultSiteName。
+func resolveSiteName(name string) string {
+	if trimmed := strings.TrimSpace(name); trimmed != "" {
+		return trimmed
+	}
+	return DefaultSiteName
+}

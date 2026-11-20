@@ -93,7 +93,6 @@ const (
 	totpLoginTTL    = 5 * time.Minute
 	totpAttemptsTTL = 15 * time.Minute
 	maxTotpAttempts = 5
-	totpIssuer      = "Habifying"
 )
 
 // TotpService handles TOTP operations
@@ -166,6 +165,15 @@ func (s *TotpService) verifyIdentity(ctx context.Context, user *User, emailCode,
 	return nil
 }
 
+// totpIssuer 返回写入 otpauth URL 的 Issuer：后台配置的站点名称，未配置时回退 DefaultSiteName。
+// 验证器 App 中显示的账户品牌随部署的站点名称变化，而不是写死的产品名。
+func (s *TotpService) totpIssuer(ctx context.Context) string {
+	if s == nil || s.settingService == nil || s.settingService.settingRepo == nil {
+		return DefaultSiteName
+	}
+	return s.settingService.GetSiteName(ctx)
+}
+
 // InitiateSetup starts the TOTP setup process
 // If email verification is enabled, emailCode is required; otherwise password is required
 func (s *TotpService) InitiateSetup(ctx context.Context, userID int64, emailCode, password string) (*TotpSetupResponse, error) {
@@ -190,7 +198,7 @@ func (s *TotpService) InitiateSetup(ctx context.Context, userID int64, emailCode
 
 	// Generate a new TOTP key
 	key, err := totp.Generate(totp.GenerateOpts{
-		Issuer:      totpIssuer,
+		Issuer:      s.totpIssuer(ctx),
 		AccountName: user.Email,
 	})
 	if err != nil {

@@ -8,7 +8,7 @@ const authStore = vi.hoisted(() => ({
 }))
 
 const appStore = vi.hoisted(() => ({
-  siteName: 'Habifying',
+  siteName: 'goreach.es',
   backendModeEnabled: false,
   cachedPublicSettings: null as null | Record<string, unknown>,
 }))

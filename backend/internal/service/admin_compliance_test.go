@@ -131,3 +131,11 @@ func TestAdminComplianceStatusIsPerAdminUser(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, statusForUserTwo.Required)
 }
+
+func TestAdminComplianceAckPhrasesAreBrandNeutral(t *testing.T) {
+	// 确认短语由管理员逐字输入，且前端 stores/adminCompliance.ts 的兜底短语必须与此逐字节一致。
+	require.Equal(t, "我已阅读、理解并同意本平台部署与运营合规承诺", AdminComplianceAckPhraseZH)
+	require.Equal(t, "I have read, understood, and agree to this platform's Deployment and Operation Compliance Commitment", AdminComplianceAckPhraseEN)
+	require.NotContains(t, AdminComplianceAckPhraseZH, "Habifying")
+	require.NotContains(t, AdminComplianceAckPhraseEN, "Habifying")
+}

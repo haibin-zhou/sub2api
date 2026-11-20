@@ -192,8 +192,8 @@ export default {
 
   // Setup Wizard
   setup: {
-    title: 'Habifying Setup',
-    description: 'Configure your Habifying instance',
+    title: '{siteName} Setup',
+    description: 'Configure your {siteName} instance',
     database: {
       title: 'Database Configuration',
       description: 'Connect to your PostgreSQL database',

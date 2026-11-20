@@ -329,7 +329,7 @@ export default {
       },
       linuxdo: {
         title: 'LinuxDo Connect 登录',
-        description: '配置 LinuxDo Connect OAuth，用于 Habifying 用户登录',
+        description: '配置 LinuxDo Connect OAuth，用于 {siteName} 用户登录',
         enable: '启用 LinuxDo 登录',
         enableHint: '在登录/注册页面显示 LinuxDo 登录入口',
         clientId: 'Client ID',
@@ -348,7 +348,7 @@ export default {
       },
       dingtalk: {
         title: '钉钉登录',
-        description: '配置钉钉 OAuth，用于 Habifying 用户登录',
+        description: '配置钉钉 OAuth，用于 {siteName} 用户登录',
         enable: '启用钉钉登录-企业内部应用',
         enableHint: '在登录/注册页面显示钉钉登录入口',
         clientId: 'Client ID（AppKey）',
@@ -669,7 +669,7 @@ export default {
           '禁用用户注册、公开页面和自助服务功能。仅管理员可以登录和管理平台。',
         siteName: '站点名称',
         siteNameHint: '显示在邮件和页面标题中',
-        siteNamePlaceholder: 'Habifying',
+        siteNamePlaceholder: 'Sub2API',
         siteSubtitle: '站点副标题',
         siteSubtitleHint: '显示在登录和注册页面',
         siteSubtitlePlaceholder: '订阅转 API 转换平台',
@@ -1008,7 +1008,7 @@ export default {
         fromEmail: '发件人邮箱',
         fromEmailPlaceholder: "noreply{'@'}example.com",
         fromName: '发件人名称',
-        fromNamePlaceholder: 'Habifying',
+        fromNamePlaceholder: '{siteName}',
         useTls: '使用 TLS',
         useTlsHint: '为 SMTP 连接启用 TLS 加密'
       },

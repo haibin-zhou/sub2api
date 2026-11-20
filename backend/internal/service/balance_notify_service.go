@@ -22,7 +22,6 @@ const (
 	quotaDimWeekly = "weekly"
 	quotaDimTotal  = "total"
 
-	defaultSiteName = "Habifying"
 )
 
 // quotaDimLabels maps dimension names to display labels.
@@ -278,7 +277,7 @@ func (s *BalanceNotifyService) getAccountQuotaNotifyEmails(ctx context.Context) 
 func (s *BalanceNotifyService) getSiteName(ctx context.Context) string {
 	name, err := s.settingRepo.GetValue(ctx, SettingKeySiteName)
 	if err != nil || name == "" {
-		return defaultSiteName
+		return DefaultSiteName
 	}
 	return name
 }

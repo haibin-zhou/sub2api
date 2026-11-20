@@ -93,7 +93,7 @@ vi.mock('@/stores', () => ({
     get cachedPublicSettings() {
       return appStoreState.cachedPublicSettings
     },
-    siteName: 'Habifying',
+    siteName: 'goreach.es',
     siteLogo: '',
     docUrl: '',
     publicSettingsLoaded: true,

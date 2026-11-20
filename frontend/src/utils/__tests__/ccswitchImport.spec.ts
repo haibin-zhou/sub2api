@@ -23,7 +23,7 @@ describe('ccswitchImport utils', () => {
 
   const baseInput = {
     baseUrl: 'https://api.example.com',
-    providerName: 'Habifying',
+    providerName: 'goreach.es',
     apiKey: 'sk-test',
     usageScript: 'return true'
   }

@@ -170,7 +170,7 @@ func TestIsAccountQuotaNotifyEnabled(t *testing.T) {
 func TestGetSiteName_FallsBackToDefault(t *testing.T) {
 	s, _ := newBalanceNotifyServiceForTest()
 	name := s.getSiteName(context.Background())
-	require.Equal(t, defaultSiteName, name)
+	require.Equal(t, DefaultSiteName, name)
 }
 
 func TestGetSiteName_Configured(t *testing.T) {

@@ -192,8 +192,8 @@ export default {
 
   // Setup Wizard
   setup: {
-    title: 'Habifying 安装向导',
-    description: '配置您的 Habifying 实例',
+    title: '{siteName} 安装向导',
+    description: '配置您的 {siteName} 实例',
     database: {
       title: '数据库配置',
       description: '连接到您的 PostgreSQL 数据库',

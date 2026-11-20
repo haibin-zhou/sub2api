@@ -547,7 +547,7 @@ func (s *PaymentService) buildPaymentSubject(plan *dbent.SubscriptionPlan, limit
 	if plan != nil {
 		productName := plan.ProductName
 		if productName == "" {
-			productName = "Habifying Subscription " + plan.Name
+			productName = paymentBrandName(cfg) + " Subscription " + plan.Name
 		}
 		return applyPaymentProductNameAffix(productName, cfg)
 	}
@@ -559,7 +559,16 @@ func (s *PaymentService) buildPaymentSubject(plan *dbent.SubscriptionPlan, limit
 	if hasPaymentProductNameAffix(cfg) {
 		return applyPaymentProductNameAffix(amountStr, cfg)
 	}
-	return "Habifying " + amountStr + " " + currency
+	return paymentBrandName(cfg) + " " + amountStr + " " + currency
+}
+
+// paymentBrandName 返回支付商品名中使用的品牌：后台站点名称，未配置时回退 DefaultSiteName。
+// 商品名前/后缀配置仍优先（见 applyPaymentProductNameAffix），这里只决定无前后缀时的品牌部分。
+func paymentBrandName(cfg *PaymentConfig) string {
+	if cfg == nil {
+		return DefaultSiteName
+	}
+	return resolveSiteName(cfg.SiteName)
 }
 
 func hasPaymentProductNameAffix(cfg *PaymentConfig) bool {
