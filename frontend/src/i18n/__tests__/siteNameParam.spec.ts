@@ -65,10 +65,24 @@ describe('i18n {siteName} default parameter', () => {
     expect(t('missing.key.for.default', 'Default message')).toBe('Default message')
   })
 
-  it('HTML-escapes the site name inside rich-text (HTML) messages only', () => {
+  it('HTML-escapes the site name in onboarding tour titles and descriptions (driver.js innerHTML)', () => {
     setBrandSiteName('A&B <i>')
-    expect(t('onboarding.user.welcome.title')).toBe('👋 Welcome to A&B <i>')
+    expect(t('onboarding.user.welcome.title')).toBe('👋 Welcome to A&amp;B &lt;i&gt;')
+    expect(t('onboarding.admin.welcome.title')).toBe('👋 Welcome to A&amp;B &lt;i&gt;')
     expect(t('onboarding.user.welcome.description')).toContain('Welcome to the A&amp;B &lt;i&gt; AI service platform.')
+
+    const [welcome] = getUserSteps(t as (key: string) => string)
+    expect(welcome.popover?.title).toBe('👋 Welcome to A&amp;B &lt;i&gt;')
+    expect(welcome.popover?.title).not.toContain('<i>')
+    expect(welcome.popover?.description).not.toContain('A&B <i>')
+  })
+
+  it('keeps the raw site name in non-onboarding plain-text messages', () => {
+    setBrandSiteName('A&B <i>')
+    expect(t('setup.title')).toBe('A&B <i> Setup')
+    expect(t('auth.signUpToStart')).toBe('Sign up to start using A&B <i>')
+    expect(t('admin.settings.linuxdo.description')).toBe('Configure LinuxDo Connect OAuth for A&B <i> end-user login')
+    expect(t('setup.title')).not.toContain('&amp;')
   })
 
   it('updates rendered translations reactively when public settings load', async () => {

@@ -58,3 +58,13 @@ func TestTotpIssuerWithoutSettingServiceUsesDefault(t *testing.T) {
 	svc := &TotpService{}
 	require.Equal(t, DefaultSiteName, svc.totpIssuer(context.Background()))
 }
+
+func TestTotpIssuerStripsColonsFromSiteName(t *testing.T) {
+	parsed := initiateTotpSetupWithSettings(t, map[string]string{SettingKeySiteName: "Acme: AI Gateway"})
+
+	require.Equal(t, "Acme AI Gateway", parsed.Query().Get("issuer"))
+	require.Equal(t, "/Acme AI Gateway:admin@example.com", parsed.Path)
+
+	require.Equal(t, "goreach.es", sanitizeTotpIssuer("goreach.es"))
+	require.Equal(t, DefaultSiteName, sanitizeTotpIssuer(" : "))
+}

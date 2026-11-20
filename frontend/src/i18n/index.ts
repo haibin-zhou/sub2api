@@ -41,7 +41,9 @@ export const i18n = createI18n({
   warnHtmlMessage: false
 })
 
-const HTML_TAG_PATTERN = /<[a-z][^>]*>/i
+// 新手引导（driver.js）把 popover 的 title 和 description 都按 innerHTML 渲染，
+// 因此 onboarding.* 下的文案插入站点名时必须做 HTML 转义；其余文案按纯文本渲染，保持原样。
+const HTML_CONSUMER_KEY_PREFIX = 'onboarding.'
 
 function escapeHtml(value: string): string {
   return value
@@ -61,23 +63,20 @@ function isPlainParams(value: unknown): value is Record<string, unknown> {
  *
  * - 调用方显式传入 siteName 时以调用方为准；
  * - 读取的是响应式 ref，模板 / computed 中的 t() 会在公共设置加载后自动重新渲染；
- * - 富文本（HTML）文案中插入的站点名会做 HTML 转义，避免站点名破坏引导弹窗结构。
+ * - 以 HTML 方式渲染的文案（onboarding.*，driver.js 的 title/description 均为 innerHTML）
+ *   插入的站点名会做 HTML 转义；其它纯文本文案保持原样，不额外查询消息内容。
  *
  * 必须在 app.use(i18n) 之前执行：全局 $t 在安装时复制的是 composer.t 的属性描述符。
  */
-export function installSiteNameParam(composer: { t: unknown; tm: unknown }): void {
+export function installSiteNameParam(composer: { t: unknown }): void {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const originalT = composer.t as (...args: any[]) => string
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const tm = composer.tm as (key: string) => unknown
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const patched = (...args: any[]): string => {
     const [key, arg2, arg3] = args
     const siteNameFor = () => {
       const name = getBrandSiteName()
-      if (typeof key !== 'string') return name
-      const raw = tm(key)
-      return typeof raw === 'string' && HTML_TAG_PATTERN.test(raw) ? escapeHtml(name) : name
+      return typeof key === 'string' && key.startsWith(HTML_CONSUMER_KEY_PREFIX) ? escapeHtml(name) : name
     }
 
     if (args.length <= 1) {
@@ -105,7 +104,7 @@ export function installSiteNameParam(composer: { t: unknown; tm: unknown }): voi
   composer.t = patched
 }
 
-installSiteNameParam(i18n.global as unknown as { t: unknown; tm: unknown })
+installSiteNameParam(i18n.global as unknown as { t: unknown })
 
 const loadedLocales = new Set<LocaleCode>()
 

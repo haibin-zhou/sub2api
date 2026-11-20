@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/pquerna/otp/totp"
@@ -167,11 +168,16 @@ func (s *TotpService) verifyIdentity(ctx context.Context, user *User, emailCode,
 
 // totpIssuer 返回写入 otpauth URL 的 Issuer：后台配置的站点名称，未配置时回退 DefaultSiteName。
 // 验证器 App 中显示的账户品牌随部署的站点名称变化，而不是写死的产品名。
+// otpauth 的 label 形如 "Issuer:account"，验证器按 ':' 拆分，因此去掉站点名中的冒号。
 func (s *TotpService) totpIssuer(ctx context.Context) string {
 	if s == nil || s.settingService == nil || s.settingService.settingRepo == nil {
 		return DefaultSiteName
 	}
-	return s.settingService.GetSiteName(ctx)
+	return sanitizeTotpIssuer(s.settingService.GetSiteName(ctx))
+}
+
+func sanitizeTotpIssuer(name string) string {
+	return resolveSiteName(strings.ReplaceAll(name, ":", ""))
 }
 
 // InitiateSetup starts the TOTP setup process
