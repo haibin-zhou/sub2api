@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount, RouterLinkStub } from '@vue/test-utils'
 
 import HomeView from '../HomeView.vue'
+import GoreachLanding from '@/components/home/GoreachLanding.vue'
 
 const { appStore, authStore } = vi.hoisted(() => ({
   appStore: {
@@ -108,7 +109,7 @@ describe('HomeView compact mode', () => {
     const wrapper = mountHome(settings)
 
     expect(wrapper.find('[data-testid="compact-home"]').exists()).toBe(false)
-    expect(wrapper.find('.terminal-container').exists()).toBe(true)
+    expect(wrapper.findComponent(GoreachLanding).exists()).toBe(true)
   })
 
   it('links unauthenticated visitors to login', () => {
@@ -163,13 +164,14 @@ describe('HomeView compact mode', () => {
     expect(modelPlazaDestination(wrapper)).toBe('/model-plaza')
   })
 
-  it('shows the model plaza link in the default home header', () => {
+  it('does not show the model plaza link on the default Goreach landing page', () => {
     const wrapper = mountHome({
       model_plaza_enabled: true,
       model_plaza_require_auth: false,
     })
 
-    expect(modelPlazaDestination(wrapper)).toBe('/model-plaza')
+    expect(wrapper.findComponent(GoreachLanding).exists()).toBe(true)
+    expect(modelPlazaDestination(wrapper)).toBeUndefined()
   })
 
   it('hides the model plaza link when the feature is disabled', () => {
