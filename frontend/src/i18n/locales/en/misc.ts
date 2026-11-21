@@ -138,6 +138,16 @@ export default {
     quotaEndsIn: 'Quota ends in {time}',
     windowNotActive: 'Awaiting first use',
     usageOf: '{used} of {limit}',
+    refreshUsage: 'Refresh',
+    periodUsage: {
+      title: 'Usage this period',
+      period: 'Period {index} · {start} ~ {end}',
+      amount: 'Official API price equivalent {amount}',
+      summary: '{requests} requests · Input {input} · Output {output} · Cache write {cacheWrite} · Cache read {cacheRead}',
+      empty: 'No usage in this period yet',
+      loading: 'Calculating usage for this period…',
+      requestFailed: 'Usage for this period is temporarily unavailable; please refresh later'
+    },
     officialUsage: {
       title: 'Official subscription usage',
       fiveHour: '5 hours',

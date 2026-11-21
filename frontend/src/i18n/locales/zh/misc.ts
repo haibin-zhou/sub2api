@@ -135,6 +135,16 @@ export default {
     quotaEndsIn: '额度将在 {time} 后结束',
     windowNotActive: '等待首次使用',
     usageOf: '已用 {used} / {limit}',
+    refreshUsage: '刷新',
+    periodUsage: {
+      title: '本周期用量',
+      period: '第 {index} 期 · {start} ~ {end}',
+      amount: '折合官方 API 价格 {amount}',
+      summary: '{requests} 次请求 · 输入 {input} · 输出 {output} · 缓存写 {cacheWrite} · 缓存读 {cacheRead}',
+      empty: '本周期暂无用量',
+      loading: '正在统计本周期用量…',
+      requestFailed: '本周期用量暂时无法获取，请稍后刷新'
+    },
     officialUsage: {
       title: '官方订阅用量',
       fiveHour: '5 小时',

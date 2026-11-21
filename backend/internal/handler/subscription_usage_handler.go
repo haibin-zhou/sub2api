@@ -18,19 +18,44 @@ type subscriptionUsageGetter interface {
 	GetForGroup(ctx context.Context, groupID int64) (*service.SubscriptionUsage, error)
 }
 
+type subscriptionPeriodUsageLister interface {
+	ListForUser(ctx context.Context, userID int64) ([]service.SubscriptionPeriodUsage, error)
+}
+
 type activeSubscriptionLister interface {
 	ListActiveUserSubscriptions(ctx context.Context, userID int64) ([]service.UserSubscription, error)
 }
 
 // SubscriptionUsageHandler 处理 GET /v1/subscription-usage（API Key）与
-// GET /api/v1/subscriptions/usage（用户 JWT）。
+// GET /api/v1/subscriptions/usage、GET /api/v1/subscriptions/period-usage（用户 JWT）。
 type SubscriptionUsageHandler struct {
-	svc  subscriptionUsageGetter
-	subs activeSubscriptionLister
+	svc     subscriptionUsageGetter
+	subs    activeSubscriptionLister
+	periods subscriptionPeriodUsageLister
 }
 
-func NewSubscriptionUsageHandler(svc *service.SubscriptionUsageService, subs *service.SubscriptionService) *SubscriptionUsageHandler {
-	return &SubscriptionUsageHandler{svc: svc, subs: subs}
+func NewSubscriptionUsageHandler(svc *service.SubscriptionUsageService, subs *service.SubscriptionService, periods *service.SubscriptionPeriodUsageService) *SubscriptionUsageHandler {
+	return &SubscriptionUsageHandler{svc: svc, subs: subs, periods: periods}
+}
+
+// ListPeriodUsageForUser 返回当前用户每个有效订阅在当前 30 天周期内按官方 API 价格折算的累计用量。
+// GET /api/v1/subscriptions/period-usage — 不接受任何客户端参数，用户只取自 JWT。
+func (h *SubscriptionUsageHandler) ListPeriodUsageForUser(c *gin.Context) {
+	subject, ok := middleware2.GetAuthSubjectFromContext(c)
+	if !ok {
+		response.Unauthorized(c, "User not found in context")
+		return
+	}
+	items, err := h.periods.ListForUser(c.Request.Context(), subject.UserID)
+	if err != nil {
+		slog.Error("user subscription period usage error", "user_id", subject.UserID, "error", err)
+		response.InternalError(c, "Failed to load subscription period usage")
+		return
+	}
+	if items == nil {
+		items = []service.SubscriptionPeriodUsage{}
+	}
+	response.Success(c, items)
 }
 
 // userSubscriptionUsageConcurrency 限制单次请求内并发查询的分组数。

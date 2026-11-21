@@ -4,7 +4,12 @@
  */
 
 import { apiClient } from './client'
-import type { UserSubscription, SubscriptionProgress, SubscriptionUsageItem } from '@/types'
+import type {
+  UserSubscription,
+  SubscriptionProgress,
+  SubscriptionUsageItem,
+  SubscriptionPeriodUsageItem
+} from '@/types'
 
 /**
  * Subscription summary for user dashboard
@@ -75,11 +80,21 @@ export async function getSubscriptionUsage(): Promise<SubscriptionUsageItem[]> {
   return response.data
 }
 
+/**
+ * Get usage of each of the current user's active subscriptions over its current 30-day period,
+ * valued at official API prices
+ */
+export async function getSubscriptionPeriodUsage(): Promise<SubscriptionPeriodUsageItem[]> {
+  const response = await apiClient.get<SubscriptionPeriodUsageItem[]>('/subscriptions/period-usage')
+  return response.data
+}
+
 export default {
   getMySubscriptions,
   getActiveSubscriptions,
   getSubscriptionsProgress,
   getSubscriptionSummary,
   getSubscriptionProgress,
-  getSubscriptionUsage
+  getSubscriptionUsage,
+  getSubscriptionPeriodUsage
 }

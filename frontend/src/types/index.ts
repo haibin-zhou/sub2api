@@ -2234,6 +2234,27 @@ export interface SubscriptionUsageItem {
   error?: { type: OfficialUsageErrorType | string; message: string }
 }
 
+/**
+ * Item of GET /api/v1/subscriptions/period-usage — usage of one active subscription
+ * accumulated over its current 30-day period (rolling from starts_at), valued at official API prices.
+ */
+export interface SubscriptionPeriodUsageItem {
+  subscription_id: number
+  group_id: number
+  /** 1-based period number */
+  period_index: number
+  /** RFC3339, inclusive */
+  period_start: string
+  /** RFC3339, exclusive */
+  period_end: string
+  request_count: number
+  input_tokens: number
+  output_tokens: number
+  cache_creation_tokens: number
+  cache_read_tokens: number
+  total_cost_usd: number
+}
+
 export interface SubscriptionProgress {
   subscription_id: number
   daily: {

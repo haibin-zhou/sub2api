@@ -141,6 +141,7 @@ func RegisterUserRoutes(
 			subscriptions.GET("/progress", h.Subscription.GetProgress)
 			subscriptions.GET("/summary", h.Subscription.GetSummary)
 			subscriptions.GET("/usage", panelRateLimiter.Heavy(), h.SubscriptionUsage.ListForUser)
+			subscriptions.GET("/period-usage", panelRateLimiter.Heavy(), h.SubscriptionUsage.ListPeriodUsageForUser)
 		}
 
 		// 渠道监控（用户只读）

@@ -2,14 +2,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import SubscriptionsView from '../SubscriptionsView.vue'
 
-const { getMySubscriptions, getSubscriptionUsage, showError } = vi.hoisted(() => ({
+const { getMySubscriptions, getSubscriptionUsage, getSubscriptionPeriodUsage, showError } = vi.hoisted(() => ({
   getMySubscriptions: vi.fn(),
   getSubscriptionUsage: vi.fn(),
+  getSubscriptionPeriodUsage: vi.fn(),
   showError: vi.fn(),
 }))
 
 vi.mock('@/api/subscriptions', () => ({
-  default: { getMySubscriptions, getSubscriptionUsage },
+  default: { getMySubscriptions, getSubscriptionUsage, getSubscriptionPeriodUsage },
 }))
 vi.mock('@/stores/app', () => ({
   useAppStore: () => ({ showError, cachedPublicSettings: null }),
@@ -63,6 +64,7 @@ describe('SubscriptionsView official subscription usage', () => {
     vi.useFakeTimers({ toFake: ['Date'] })
     vi.setSystemTime(new Date(2026, 10, 21, 10, 0))
     vi.spyOn(console, 'error').mockImplementation(() => {})
+    getSubscriptionPeriodUsage.mockResolvedValue([])
   })
 
   afterEach(() => {
@@ -156,13 +158,22 @@ describe('SubscriptionsView official subscription usage', () => {
     expect(wrapper.text()).not.toContain('30%')
   })
 
-  it('does not request official usage or show refresh when there are no anthropic subscriptions', async () => {
+  it('does not request official usage when there are no anthropic subscriptions (refresh still covers period usage)', async () => {
     getMySubscriptions.mockResolvedValue([sub(11, 2, {}, 'openai')])
     const wrapper = mountView()
     await flushPromises()
     expect(getSubscriptionUsage).not.toHaveBeenCalled()
-    expect(wrapper.find('[data-testid="official-usage-refresh"]').exists()).toBe(false)
+    await wrapper.get('[data-testid="official-usage-refresh"]').trigger('click')
+    await flushPromises()
+    expect(getSubscriptionUsage).not.toHaveBeenCalled()
     expect(wrapper.find('[data-testid="unlimited-box"]').exists()).toBe(true)
+  })
+
+  it('shows no refresh button when there are no active subscriptions', async () => {
+    getMySubscriptions.mockResolvedValue([{ ...sub(11, 2, {}, 'openai'), status: 'expired' }])
+    const wrapper = mountView()
+    await flushPromises()
+    expect(wrapper.find('[data-testid="official-usage-refresh"]').exists()).toBe(false)
   })
 
   it('shows a single notice when the usage request fails; subscriptions still render', async () => {

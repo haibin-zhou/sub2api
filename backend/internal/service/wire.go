@@ -864,6 +864,7 @@ var ProviderSet = wire.NewSet(
 	// Core services
 	ProvideAuthService,
 	NewSubscriptionUsageService,
+	NewSubscriptionPeriodUsageService,
 	NewPasskeyService,
 	NewUserService,
 	NewMCPOAuthService,

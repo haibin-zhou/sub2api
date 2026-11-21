@@ -314,27 +314,59 @@
                 </p>
               </template>
             </div>
+
+            <!-- Current 30-day period usage valued at official API prices -->
+            <div
+              v-if="periodUsageFor(subscription)"
+              :data-testid="`period-usage-${subscription.id}`"
+              class="space-y-1 rounded-xl border border-gray-100 p-3 dark:border-dark-700"
+            >
+              <div class="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
+                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  {{ t('userSubscriptions.periodUsage.title') }}
+                </span>
+                <span class="text-[11px] text-gray-400 dark:text-gray-500">
+                  {{ periodSubtitle(periodUsageFor(subscription)!) }}
+                </span>
+              </div>
+              <p class="text-lg font-semibold text-gray-900 dark:text-white">
+                {{ t('userSubscriptions.periodUsage.amount', { amount: formatUsd(periodUsageFor(subscription)!.total_cost_usd) }) }}
+              </p>
+              <p class="text-xs text-gray-500 dark:text-dark-400">
+                {{ periodSummary(periodUsageFor(subscription)!) }}
+              </p>
+            </div>
+            <div
+              v-else-if="isPeriodUsageEligible(subscription) && periodLoading"
+              :data-testid="`period-usage-loading-${subscription.id}`"
+              class="flex items-center gap-2 text-xs text-gray-500 dark:text-dark-400"
+            >
+              <div class="h-3 w-3 animate-spin rounded-full border-2 border-primary-500 border-t-transparent"></div>
+              {{ t('userSubscriptions.periodUsage.loading') }}
+            </div>
           </div>
         </div>
       </div>
 
       <!-- Official usage: whole-request failure notice + refresh -->
       <div
-        v-if="!loading && hasOfficialUsageSubscriptions"
-        class="flex items-center justify-end gap-3 text-xs text-gray-500 dark:text-dark-400"
+        v-if="!loading && hasActiveSubscriptions"
+        class="flex flex-wrap items-center justify-end gap-3 text-xs text-gray-500 dark:text-dark-400"
       >
         <span v-if="usageFailed" data-testid="official-usage-notice">
           {{ t('userSubscriptions.officialUsage.requestFailed') }}
+        </span>
+        <span v-if="periodFailed" data-testid="period-usage-notice">
+          {{ t('userSubscriptions.periodUsage.requestFailed') }}
         </span>
         <button
           type="button"
           data-testid="official-usage-refresh"
           class="rounded-lg border border-gray-200 px-2.5 py-1 font-medium text-gray-600 transition-colors hover:bg-gray-50 disabled:opacity-50 dark:border-dark-600 dark:text-gray-300 dark:hover:bg-dark-700"
-          :disabled="usageLoading"
-          :title="t('userSubscriptions.officialUsage.title')"
-          @click="loadOfficialUsage"
+          :disabled="usageLoading || periodLoading"
+          @click="refreshUsage"
         >
-          {{ t('userSubscriptions.officialUsage.refresh') }}
+          {{ t('userSubscriptions.refreshUsage') }}
         </button>
       </div>
     </div>
@@ -351,11 +383,12 @@ import type {
   UserSubscription,
   OfficialSubscriptionUsage,
   OfficialUsageWindow,
-  SubscriptionUsageItem
+  SubscriptionUsageItem,
+  SubscriptionPeriodUsageItem
 } from '@/types'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Icon from '@/components/icons/Icon.vue'
-import { formatDateTimeToMinute } from '@/utils/format'
+import { formatCompactNumber, formatDateTimeToMinute } from '@/utils/format'
 import { hasPeakRate, formatPeakRateWindow, serverTimezoneLabel } from '@/utils/peak-rate'
 import { platformBorderClass, platformBadgeClass, platformButtonClass, platformLabel } from '@/utils/platformColors'
 import {
@@ -507,6 +540,84 @@ function formatResetsAt(value: string | null | undefined): string {
   return sameDay ? clock : `${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${clock}`
 }
 
+// ==================== Current 30-day period usage (official API prices) ====================
+
+const periodBySubscription = ref(new Map<number, SubscriptionPeriodUsageItem>())
+const periodLoading = ref(false)
+const periodFailed = ref(false)
+
+const hasActiveSubscriptions = computed(() => subscriptions.value.some(isPeriodUsageEligible))
+
+function isPeriodUsageEligible(subscription: UserSubscription): boolean {
+  return subscription.status === 'active'
+}
+
+async function loadPeriodUsage() {
+  if (periodLoading.value) return
+  periodFailed.value = false
+  periodLoading.value = true
+  try {
+    const items = await subscriptionsAPI.getSubscriptionPeriodUsage()
+    const next = new Map<number, SubscriptionPeriodUsageItem>()
+    for (const item of items || []) next.set(item.subscription_id, item)
+    periodBySubscription.value = next
+  } catch (error) {
+    console.error('Failed to load subscription period usage:', error)
+    periodFailed.value = true
+  } finally {
+    periodLoading.value = false
+  }
+}
+
+/** Loads official usage (Anthropic only) and period usage (all active) in parallel. */
+async function refreshUsage() {
+  const tasks: Promise<void>[] = []
+  if (hasOfficialUsageSubscriptions.value) tasks.push(loadOfficialUsage())
+  if (hasActiveSubscriptions.value) tasks.push(loadPeriodUsage())
+  await Promise.all(tasks)
+}
+
+function periodUsageFor(subscription: UserSubscription): SubscriptionPeriodUsageItem | null {
+  if (!isPeriodUsageEligible(subscription)) return null
+  return periodBySubscription.value.get(subscription.id) ?? null
+}
+
+const usdFormatter = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
+function formatUsd(amount: number | null | undefined): string {
+  const v = Number(amount)
+  return `$${usdFormatter.format(Number.isFinite(v) ? v : 0)}`
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000
+
+function formatMonthDay(value: string | number): string {
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return ''
+  return `${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
+}
+
+/** "Period N · MM-DD ~ MM-DD" in local dates; the end shows the inclusive last day (period_end - 1 day). */
+function periodSubtitle(item: SubscriptionPeriodUsageItem): string {
+  const end = new Date(item.period_end).getTime() - DAY_MS
+  return t('userSubscriptions.periodUsage.period', {
+    index: item.period_index,
+    start: formatMonthDay(item.period_start),
+    end: formatMonthDay(end)
+  })
+}
+
+function periodSummary(item: SubscriptionPeriodUsageItem): string {
+  if (!item.request_count) return t('userSubscriptions.periodUsage.empty')
+  return t('userSubscriptions.periodUsage.summary', {
+    requests: item.request_count,
+    input: formatCompactNumber(item.input_tokens),
+    output: formatCompactNumber(item.output_tokens),
+    cacheWrite: formatCompactNumber(item.cache_creation_tokens),
+    cacheRead: formatCompactNumber(item.cache_read_tokens)
+  })
+}
+
 function getProgressWidth(used: number | undefined, limit: number | null | undefined): string {
   if (!limit || limit === 0) return '0%'
   const percentage = Math.min(((used || 0) / limit) * 100, 100)
@@ -594,8 +705,6 @@ function formatResetTime(windowStart: string | null, windowHours: number): strin
 
 onMounted(async () => {
   await loadSubscriptions()
-  if (hasOfficialUsageSubscriptions.value) {
-    void loadOfficialUsage()
-  }
+  void refreshUsage()
 })
 </script>
