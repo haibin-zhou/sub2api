@@ -320,7 +320,7 @@
 
       <!-- Official usage: whole-request failure notice + refresh -->
       <div
-        v-if="!loading && hasActiveSubscriptions"
+        v-if="!loading && hasOfficialUsageSubscriptions"
         class="flex items-center justify-end gap-3 text-xs text-gray-500 dark:text-dark-400"
       >
         <span v-if="usageFailed" data-testid="official-usage-notice">
@@ -408,7 +408,7 @@ const usageByGroup = ref(new Map<number, SubscriptionUsageItem>())
 const usageLoading = ref(false)
 const usageFailed = ref(false)
 
-const hasActiveSubscriptions = computed(() => subscriptions.value.some((s) => s.status === 'active'))
+const hasOfficialUsageSubscriptions = computed(() => subscriptions.value.some(isOfficialUsageEligible))
 
 const OFFICIAL_WINDOWS = [
   { key: 'five_hour', labelKey: 'userSubscriptions.officialUsage.fiveHour' },
@@ -434,13 +434,19 @@ async function loadOfficialUsage() {
   }
 }
 
+/** Official upstream usage only applies to Anthropic subscription groups. */
+function isOfficialUsageEligible(subscription: UserSubscription): boolean {
+  return subscription.status === 'active' && subscription.group?.platform === 'anthropic'
+}
+
 function showOfficialUsageSection(subscription: UserSubscription): boolean {
-  if (subscription.status !== 'active') return false
+  if (!isOfficialUsageEligible(subscription)) return false
   if (usageByGroup.value.has(subscription.group_id)) return true
   return usageLoading.value && !usageFailed.value
 }
 
 function officialUsageFor(subscription: UserSubscription): OfficialSubscriptionUsage | null {
+  if (!isOfficialUsageEligible(subscription)) return null
   return usageByGroup.value.get(subscription.group_id)?.usage ?? null
 }
 
@@ -473,8 +479,10 @@ function clampPercent(utilization: number | null | undefined): number {
   return Math.min(Math.max(v, 0), 100)
 }
 
+/** Real rounded utilization like /quota (may exceed 100); only the bar width is clamped. */
 function officialPercent(utilization: number | null | undefined): number {
-  return Math.round(clampPercent(utilization))
+  const v = Number(utilization)
+  return Number.isFinite(v) ? Math.round(v) : 0
 }
 
 const pad2 = (n: number) => String(n).padStart(2, '0')
@@ -585,7 +593,7 @@ function formatResetTime(windowStart: string | null, windowHours: number): strin
 
 onMounted(async () => {
   await loadSubscriptions()
-  if (hasActiveSubscriptions.value) {
+  if (hasOfficialUsageSubscriptions.value) {
     void loadOfficialUsage()
   }
 })

@@ -28,7 +28,7 @@ vi.mock('vue-i18n', async () => {
   }
 })
 
-function sub(id: number, groupId: number, limits: Record<string, number> = {}) {
+function sub(id: number, groupId: number, limits: Record<string, number> = {}, platform = 'anthropic') {
   return {
     id,
     user_id: 1,
@@ -44,7 +44,7 @@ function sub(id: number, groupId: number, limits: Record<string, number> = {}) {
     created_at: '2026-11-01T00:00:00Z',
     updated_at: '2026-11-01T00:00:00Z',
     expires_at: null,
-    group: { id: groupId, name: `G${groupId}`, platform: 'anthropic', rate_multiplier: 1, ...limits },
+    group: { id: groupId, name: `G${groupId}`, platform, rate_multiplier: 1, ...limits },
   }
 }
 
@@ -94,7 +94,7 @@ describe('SubscriptionsView official subscription usage', () => {
     expect(text).toContain('42%')
     expect(text).toContain('userSubscriptions.officialUsage.resetsAt(14:30)')
     expect(text).toContain('userSubscriptions.officialUsage.sevenDay')
-    expect(text).toContain('100%')
+    expect(text).toContain('130%')
     expect(text).toContain('userSubscriptions.officialUsage.resetsAt(11-25 09:05)')
     expect(text).toContain('userSubscriptions.officialUsage.sevenDayFable')
     expect(text).toContain('8%')
@@ -138,6 +138,31 @@ describe('SubscriptionsView official subscription usage', () => {
     expect(wrapper.text()).toContain('userSubscriptions.daily')
     expect(wrapper.find('[data-testid="official-usage-1"]').exists()).toBe(true)
     expect(wrapper.find('[data-testid="unlimited-box"]').exists()).toBe(false)
+  })
+
+  it('renders official usage only for anthropic groups; others keep the unlimited box', async () => {
+    getMySubscriptions.mockResolvedValue([sub(10, 1), sub(11, 2, {}, 'openai'), sub(12, 3, {}, 'gemini')])
+    getSubscriptionUsage.mockResolvedValue([
+      { group_id: 1, usage: { five_hour: { utilization: 20, resets_at: null, remaining_seconds: 0 } } },
+      { group_id: 2, usage: { five_hour: { utilization: 30, resets_at: null, remaining_seconds: 0 } } },
+      { group_id: 3, usage: null, error: { type: 'not_subscription_group', message: 'x' } },
+    ])
+    const wrapper = mountView()
+    await flushPromises()
+    expect(wrapper.find('[data-testid="official-usage-1"]').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="official-usage-2"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="official-usage-3"]').exists()).toBe(false)
+    expect(wrapper.findAll('[data-testid="unlimited-box"]')).toHaveLength(2)
+    expect(wrapper.text()).not.toContain('30%')
+  })
+
+  it('does not request official usage or show refresh when there are no anthropic subscriptions', async () => {
+    getMySubscriptions.mockResolvedValue([sub(11, 2, {}, 'openai')])
+    const wrapper = mountView()
+    await flushPromises()
+    expect(getSubscriptionUsage).not.toHaveBeenCalled()
+    expect(wrapper.find('[data-testid="official-usage-refresh"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="unlimited-box"]').exists()).toBe(true)
   })
 
   it('shows a single notice when the usage request fails; subscriptions still render', async () => {
