@@ -131,33 +131,23 @@
           </p>
 
           <div class="plans">
-            <article class="plan">
-              <h3>Standard</h3>
-              <p class="ratio">约 1.25× Pro 用量</p>
-              <div class="price"><span class="cur">$</span><span class="num">45</span><span class="per">/ 月</span></div>
-              <p class="was">原价 $60 / 月</p>
-              <ul>
-                <li>适合日常单项目，常规调用频次</li>
+            <article v-for="plan in displayPlans" :key="plan.key" class="plan" :class="{ featured: plan.featured }">
+              <span v-if="plan.featured" class="plan-badge">推荐</span>
+              <h3>{{ plan.name }}</h3>
+              <p v-if="plan.description" class="ratio">{{ plan.description }}</p>
+              <div class="price">
+                <span class="cur">{{ plan.symbol }}</span><span class="num">{{ plan.priceText }}</span
+                ><span class="per">/ {{ plan.period }}</span>
+              </div>
+              <p v-if="plan.originalText" class="was">原价 {{ plan.symbol }}{{ plan.originalText }} / {{ plan.period }}</p>
+              <ul v-if="plan.features.length">
+                <li v-for="(f, i) in plan.features" :key="i">{{ f }}</li>
               </ul>
               <router-link
-                class="gr-btn gr-btn-ghost"
-                :to="isAuthenticated ? dashboardPath : '/register?plan=standard'"
-                >{{ isAuthenticated ? '选择 Standard' : '注册并选择 Standard' }}</router-link
-              >
-            </article>
-            <article class="plan featured">
-              <span class="plan-badge">推荐</span>
-              <h3>Premium</h3>
-              <p class="ratio">约 6.25× Pro 用量</p>
-              <div class="price"><span class="cur">$</span><span class="num">180</span><span class="per">/ 月</span></div>
-              <p class="was">原价 $220 / 月</p>
-              <ul>
-                <li>适合高频调用，多项目并行；优先开通，优先异常协助排查</li>
-              </ul>
-              <router-link
-                class="gr-btn gr-btn-primary"
-                :to="isAuthenticated ? dashboardPath : '/register?plan=premium'"
-                >{{ isAuthenticated ? '选择 Premium' : '注册并选择 Premium' }}</router-link
+                class="gr-btn"
+                :class="plan.featured ? 'gr-btn-primary' : 'gr-btn-ghost'"
+                :to="planLink(plan)"
+                >{{ isAuthenticated ? `订阅 ${plan.name}` : `注册并订阅 ${plan.name}` }}</router-link
               >
             </article>
           </div>
@@ -267,9 +257,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import { paymentAPI } from '@/api/payment'
+import { FALLBACK_PLANS, toDisplayPlans, type DisplayPlan } from './landingPlans'
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     isAuthenticated: boolean
     dashboardPath: string
@@ -280,6 +272,23 @@ withDefaults(
 )
 
 const rootEl = ref<HTMLElement | null>(null)
+
+const remotePlans = ref<DisplayPlan[] | null>(null)
+const displayPlans = computed(() => (remotePlans.value && remotePlans.value.length ? remotePlans.value : FALLBACK_PLANS))
+
+function planLink(plan: DisplayPlan): string {
+  const target = plan.id != null ? `/purchase?tab=subscription&plan=${plan.id}` : '/purchase?tab=subscription'
+  return props.isAuthenticated ? target : `/register?redirect=${encodeURIComponent(target)}`
+}
+
+onMounted(async () => {
+  try {
+    const res = await paymentAPI.getPublicPlans()
+    remotePlans.value = toDisplayPlans(Array.isArray(res.data) ? res.data : [])
+  } catch {
+    remotePlans.value = null
+  }
+})
 
 const compareRows = [
   { risk: '支付地区与账单信息', self: '常与账号地区不一致', relay: '共用支付渠道，来源混杂', ours: '境外主体 + 企业商业卡支付' },

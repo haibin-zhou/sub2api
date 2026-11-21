@@ -20,6 +20,9 @@ import (
 const (
 	publicOrderVerifyRateLimit       = 20
 	publicOrderVerifyRateLimitWindow = time.Minute
+
+	publicPlansRateLimit       = 60
+	publicPlansRateLimitWindow = time.Minute
 )
 
 // RegisterPaymentRoutes registers all payment-related routes:
@@ -74,6 +77,10 @@ func RegisterPaymentRoutes(
 			publicRateLimiter.Limit("payment-public-order-verify", publicOrderVerifyRateLimit, publicOrderVerifyRateLimitWindow),
 			paymentHandler.VerifyOrderPublic)
 		public.POST("/orders/resolve", paymentHandler.ResolveOrderPublicByResumeToken)
+		// Landing-page pricing: anonymous, read-only, IP rate-limited.
+		public.GET("/plans",
+			publicRateLimiter.Limit("payment-public-plans", publicPlansRateLimit, publicPlansRateLimitWindow),
+			paymentHandler.GetPublicPlans)
 	}
 
 	// --- Webhook endpoints (no auth) ---

@@ -256,10 +256,10 @@ async function mountSubscriptionConfirm(options: Parameters<typeof checkoutInfoW
   return wrapper
 }
 
-async function mountSubscriptionPlanList(planCount: number) {
+async function mountSubscriptionPlanList(planCount: number, extraQuery: Record<string, string> = {}) {
   vi.useRealTimers()
   routeState.path = '/purchase'
-  routeState.query = { tab: 'subscription' }
+  routeState.query = { tab: 'subscription', ...extraQuery }
   routerReplace.mockReset().mockResolvedValue(undefined)
   routerPush.mockReset().mockResolvedValue(undefined)
   routerResolve.mockClear()
@@ -371,6 +371,19 @@ describe('PaymentView subscription plan grid', () => {
       'sm:grid-cols-2',
       'lg:grid-cols-3',
     ]))
+  })
+})
+
+describe('PaymentView plan deep link (?tab=subscription&plan=<id>)', () => {
+  it('preselects the linked plan and skips the plan grid', async () => {
+    const wrapper = await mountSubscriptionPlanList(3, { plan: '2' })
+    expect(wrapper.findAllComponents(SubscriptionPlanCard)).toHaveLength(0)
+    expect(wrapper.get('h3').text()).toBe('Plan 2')
+  })
+
+  it.each(['999', 'abc', '2x'])('falls back to the plan grid for unknown/invalid plan %s', async (plan) => {
+    const wrapper = await mountSubscriptionPlanList(3, { plan })
+    expect(wrapper.findAllComponents(SubscriptionPlanCard)).toHaveLength(3)
   })
 })
 

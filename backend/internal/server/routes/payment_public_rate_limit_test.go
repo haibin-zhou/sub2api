@@ -82,3 +82,37 @@ func TestPublicOrderVerifyRateLimitFailsOpenWhenRedisUnavailable(t *testing.T) {
 	w := postPublicOrderVerify(router, "203.0.113.30:1234")
 	require.Equal(t, http.StatusBadRequest, w.Code, "users mid-payment must not be blocked by a Redis outage")
 }
+
+func TestPublicPlansRouteIsAnonymousAndRateLimitedPerIP(t *testing.T) {
+	mr := miniredis.RunT(t)
+	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	t.Cleanup(func() { _ = rdb.Close() })
+
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	// The zero-value handler has no services; Recovery turns its nil deref into
+	// a 500, which still proves the request got past auth and the limiter.
+	router.Use(gin.Recovery())
+	v1 := router.Group("/api/v1")
+	noop := func(c *gin.Context) { c.Next() }
+	deny := func(c *gin.Context) { c.AbortWithStatus(http.StatusUnauthorized) }
+	RegisterPaymentRoutes(v1, &handler.PaymentHandler{}, &handler.PaymentWebhookHandler{}, &admin.PaymentHandler{},
+		servermiddleware.JWTAuthMiddleware(deny), servermiddleware.AdminAuthMiddleware(deny),
+		servermiddleware.AuditLogMiddleware(noop), nil, nil, rdb)
+
+	get := func(remoteAddr string) int {
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/payment/public/plans", nil)
+		req.RemoteAddr = remoteAddr
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, req)
+		return w.Code
+	}
+
+	for i := 1; i <= publicPlansRateLimit; i++ {
+		code := get("198.51.100.30:1234")
+		require.NotEqual(t, http.StatusUnauthorized, code, "request %d must not require JWT", i)
+		require.NotEqual(t, http.StatusTooManyRequests, code, "request %d should pass the limiter", i)
+	}
+	require.Equal(t, http.StatusTooManyRequests, get("198.51.100.30:1234"))
+	require.NotEqual(t, http.StatusTooManyRequests, get("198.51.100.31:1234"), "other IPs keep their own budget")
+}

@@ -805,6 +805,13 @@ function planPeakRateLabel(plan: SubscriptionPlan): string {
   return formatPeakRateWindow(plan, serverTimezoneLabel(appStore.cachedPublicSettings?.server_utc_offset))
 }
 
+function findPlanByQuery(plans: SubscriptionPlan[], raw: unknown): SubscriptionPlan | null {
+  const value = Array.isArray(raw) ? raw[0] : raw
+  if (typeof value !== 'string' || !/^\d+$/.test(value)) return null
+  const id = Number(value)
+  return plans.find(plan => plan.id === id) ?? null
+}
+
 function selectPlan(plan: SubscriptionPlan) {
   selectedPlan.value = plan
   errorMessage.value = ''
@@ -1205,7 +1212,11 @@ onMounted(async () => {
     // Handle renewal navigation: ?tab=subscription&group=123 (ignored when subscriptions are disabled)
     if (route.query.tab === 'subscription' && subscriptionEnabled.value) {
       activeTab.value = 'subscription'
-      if (route.query.group) {
+      // Landing-page deep link: ?tab=subscription&plan=<id> preselects that plan.
+      const deepLinkedPlan = findPlanByQuery(checkout.value.plans, route.query.plan)
+      if (deepLinkedPlan) {
+        selectedPlan.value = deepLinkedPlan
+      } else if (route.query.group) {
         const groupId = Number(route.query.group)
         const groupPlans = checkout.value.plans.filter(p => p.group_id === groupId)
         if (groupPlans.length === 1) {

@@ -23,7 +23,26 @@ export interface PublicOrderVerifyResult {
   expires_at: string
 }
 
+/** Anonymous-safe subscription plan used by the landing page pricing section */
+export interface PublicPlan {
+  id: number
+  name: string
+  description: string
+  price: number
+  original_price?: number
+  currency?: string
+  validity_days: number
+  validity_unit: string
+  features: string
+  sort_order: number
+}
+
 export const paymentAPI = {
+  /** For-sale subscription plans for anonymous visitors (landing page) */
+  getPublicPlans() {
+    return apiClient.get<PublicPlan[]>('/payment/public/plans')
+  },
+
   /** Get payment configuration (enabled types, limits, etc.) */
   getConfig() {
     return apiClient.get<PaymentConfig>('/payment/config')

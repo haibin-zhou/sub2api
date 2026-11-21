@@ -1,5 +1,5 @@
 import { flushPromises, mount } from '@vue/test-utils'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import RegisterView from '@/views/auth/RegisterView.vue'
 
 const {
@@ -40,9 +40,11 @@ const publicSettings = {
   google_oauth_enabled: false
 }
 
+const routeQuery: Record<string, unknown> = {}
+
 vi.mock('vue-router', () => ({
   useRouter: () => ({ push: pushMock }),
-  useRoute: () => ({ query: {} })
+  useRoute: () => ({ query: routeQuery })
 }))
 
 vi.mock('vue-i18n', () => ({
@@ -206,6 +208,38 @@ describe('RegisterView', () => {
     })
     expect(pushMock).toHaveBeenCalledWith('/email-verify')
     expect(registerMock).not.toHaveBeenCalled()
+  })
+
+  describe('post-registration redirect (?redirect=)', () => {
+    const fill = async (wrapper: ReturnType<typeof mountRegister>) => {
+      await wrapper.get('#email').setValue('user@example.com')
+      await wrapper.get('#password').setValue('secret-123')
+      await wrapper.get('#confirmPassword').setValue('secret-123')
+      await wrapper.get('form').trigger('submit.prevent')
+      await flushPromises()
+    }
+    afterEach(() => {
+      delete routeQuery.redirect
+    })
+
+    it('carries a same-origin redirect through email verification', async () => {
+      routeQuery.redirect = '/purchase?tab=subscription&plan=3'
+      getPublicSettingsMock.mockResolvedValueOnce({ ...publicSettings, turnstile_enabled: false, email_verify_enabled: true })
+      const wrapper = mountRegister()
+      await flushPromises()
+      await fill(wrapper)
+      expect(JSON.parse(sessionStorage.getItem('register_data')!).pending_redirect).toBe('/purchase?tab=subscription&plan=3')
+      expect(pushMock).toHaveBeenCalledWith('/email-verify')
+    })
+
+    it.each(['//evil.example/x', 'https://evil.example/x', '/\\evil.example'])('ignores unsafe redirect %s', async (redirect) => {
+      routeQuery.redirect = redirect
+      getPublicSettingsMock.mockResolvedValueOnce({ ...publicSettings, turnstile_enabled: false, email_verify_enabled: true })
+      const wrapper = mountRegister()
+      await flushPromises()
+      await fill(wrapper)
+      expect(JSON.parse(sessionStorage.getItem('register_data')!).pending_redirect).toBeUndefined()
+    })
   })
 
   it('keeps the optional affiliate invitation field before Turnstile', async () => {

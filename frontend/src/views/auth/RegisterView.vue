@@ -408,6 +408,14 @@ const LOGIN_AGREEMENT_STORAGE_KEY = 'sub2api_login_agreement_consent'
 
 const router = useRouter()
 const route = useRoute()
+
+// Same-origin path to continue to after registration (?redirect=/purchase?...).
+// Only app-relative paths are accepted to avoid open redirects.
+const postRegisterRedirect = computed(() => {
+  const raw = Array.isArray(route.query.redirect) ? route.query.redirect[0] : route.query.redirect
+  if (typeof raw !== 'string') return ''
+  return raw.startsWith('/') && !raw.startsWith('//') && !raw.startsWith('/\\') ? raw : ''
+})
 const authStore = useAuthStore()
 const appStore = useAppStore()
 
@@ -1067,7 +1075,8 @@ async function handleRegister(): Promise<void> {
           tencent_captcha_randstr: tencentCaptchaEnabled.value ? tencentCaptchaRandstr.value : undefined,
           promo_code: formData.promo_code || undefined,
           invitation_code: formData.invitation_code || undefined,
-          ...(affCode ? { aff_code: affCode } : {})
+          ...(affCode ? { aff_code: affCode } : {}),
+          ...(postRegisterRedirect.value ? { pending_redirect: postRegisterRedirect.value } : {})
         })
       )
 
@@ -1093,8 +1102,8 @@ async function handleRegister(): Promise<void> {
     // Show success toast
     appStore.showSuccess(t('auth.accountCreatedSuccess', { siteName: siteName.value }))
 
-    // Redirect to dashboard
-    await router.push('/dashboard')
+    // Redirect to the page that sent the user here (e.g. a landing-page plan), else dashboard
+    await router.push(postRegisterRedirect.value || '/dashboard')
   } catch (error: unknown) {
     // Handle registration error
     errorMessage.value = buildRegistrationErrorMessage(error, t('auth.registrationFailed'))
