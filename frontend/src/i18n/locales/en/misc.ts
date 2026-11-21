@@ -137,7 +137,22 @@ export default {
     resetIn: 'Resets in {time}',
     quotaEndsIn: 'Quota ends in {time}',
     windowNotActive: 'Awaiting first use',
-    usageOf: '{used} of {limit}'
+    usageOf: '{used} of {limit}',
+    officialUsage: {
+      title: 'Official subscription usage',
+      fiveHour: '5 hours',
+      sevenDay: '7 days',
+      sevenDaySonnet: '7 days Sonnet',
+      sevenDayFable: '7 days Fable',
+      resetsAt: 'Resets {time}',
+      updatedAt: 'Updated {time}',
+      loading: 'Loading official usage…',
+      refresh: 'Refresh',
+      provisioning: 'Seat is being provisioned; no usage yet',
+      noAvailableAccount: 'No subscription account available right now; please try again later',
+      unavailable: 'Official usage is temporarily unavailable',
+      requestFailed: 'Official subscription usage is temporarily unavailable; please refresh later'
+    }
   },
 
   // Onboarding Tour

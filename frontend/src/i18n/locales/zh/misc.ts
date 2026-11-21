@@ -134,7 +134,22 @@ export default {
     resetIn: '{time} 后重置',
     quotaEndsIn: '额度将在 {time} 后结束',
     windowNotActive: '等待首次使用',
-    usageOf: '已用 {used} / {limit}'
+    usageOf: '已用 {used} / {limit}',
+    officialUsage: {
+      title: '官方订阅用量',
+      fiveHour: '5 小时',
+      sevenDay: '7 天',
+      sevenDaySonnet: '7 天 Sonnet',
+      sevenDayFable: '7 天 Fable',
+      resetsAt: '{time} 重置',
+      updatedAt: '更新于 {time}',
+      loading: '正在获取官方用量…',
+      refresh: '刷新',
+      provisioning: '席位开通中，暂无订阅用量',
+      noAvailableAccount: '暂无可用订阅账号，请稍后再试',
+      unavailable: '官方用量暂时无法获取',
+      requestFailed: '官方订阅用量暂时无法获取，请稍后刷新'
+    }
   },
 
   // Onboarding Tour

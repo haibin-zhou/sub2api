@@ -224,8 +224,10 @@
               v-if="
                 !subscription.group?.daily_limit_usd &&
                 !subscription.group?.weekly_limit_usd &&
-                !subscription.group?.monthly_limit_usd
+                !subscription.group?.monthly_limit_usd &&
+                !officialUsageFor(subscription)
               "
+              data-testid="unlimited-box"
               class="flex items-center justify-center rounded-xl bg-gradient-to-r from-emerald-50 to-teal-50 py-6 dark:from-emerald-900/20 dark:to-teal-900/20"
             >
               <div class="flex items-center gap-3">
@@ -240,20 +242,117 @@
                 </div>
               </div>
             </div>
+
+            <!-- Official upstream subscription usage (same logic as /quota) -->
+            <div
+              v-if="showOfficialUsageSection(subscription)"
+              :data-testid="`official-usage-${subscription.group_id}`"
+              class="space-y-3 rounded-xl border border-gray-100 p-3 dark:border-dark-700"
+            >
+              <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2">
+                  <span class="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {{ t('userSubscriptions.officialUsage.title') }}
+                  </span>
+                  <span
+                    v-if="officialUsageFor(subscription)?.plan"
+                    class="rounded-md bg-gray-100 px-1.5 py-0.5 text-[11px] font-medium uppercase text-gray-600 dark:bg-dark-700 dark:text-gray-300"
+                  >
+                    {{ officialUsageFor(subscription)?.plan }}
+                  </span>
+                </div>
+                <span
+                  v-if="officialUsageFor(subscription)?.updated_at"
+                  class="text-[11px] text-gray-400 dark:text-gray-500"
+                >
+                  {{ t('userSubscriptions.officialUsage.updatedAt', { time: formatClock(officialUsageFor(subscription)?.updated_at) }) }}
+                </span>
+              </div>
+
+              <div
+                v-if="usageLoading && !usageByGroup.has(subscription.group_id)"
+                :data-testid="`official-usage-loading-${subscription.group_id}`"
+                class="flex items-center gap-2 text-xs text-gray-500 dark:text-dark-400"
+              >
+                <div class="h-3 w-3 animate-spin rounded-full border-2 border-primary-500 border-t-transparent"></div>
+                {{ t('userSubscriptions.officialUsage.loading') }}
+              </div>
+
+              <p
+                v-else-if="officialUsageErrorText(subscription)"
+                class="text-xs text-gray-500 dark:text-dark-400"
+              >
+                {{ officialUsageErrorText(subscription) }}
+              </p>
+
+              <template v-else-if="officialUsageFor(subscription)">
+                <div
+                  v-for="win in officialUsageWindows(officialUsageFor(subscription))"
+                  :key="win.key"
+                  class="space-y-1"
+                >
+                  <div class="flex items-center justify-between text-xs">
+                    <span class="font-medium text-gray-700 dark:text-gray-300">{{ t(win.labelKey) }}</span>
+                    <span class="text-gray-500 dark:text-dark-400">
+                      {{ officialPercent(win.window.utilization) }}%<template v-if="win.window.resets_at"> · {{ t('userSubscriptions.officialUsage.resetsAt', { time: formatResetsAt(win.window.resets_at) }) }}</template>
+                    </span>
+                  </div>
+                  <div class="relative h-2 overflow-hidden rounded-full bg-gray-200 dark:bg-dark-600">
+                    <div
+                      data-testid="official-usage-bar"
+                      class="absolute inset-y-0 left-0 rounded-full transition-all duration-300"
+                      :class="getProgressBarClass(clampPercent(win.window.utilization), 100)"
+                      :style="{ width: `${clampPercent(win.window.utilization)}%` }"
+                    ></div>
+                  </div>
+                </div>
+                <p
+                  v-if="officialUsageWindows(officialUsageFor(subscription)).length === 0"
+                  class="text-xs text-gray-500 dark:text-dark-400"
+                >
+                  {{ t('userSubscriptions.officialUsage.unavailable') }}
+                </p>
+              </template>
+            </div>
           </div>
         </div>
+      </div>
+
+      <!-- Official usage: whole-request failure notice + refresh -->
+      <div
+        v-if="!loading && hasActiveSubscriptions"
+        class="flex items-center justify-end gap-3 text-xs text-gray-500 dark:text-dark-400"
+      >
+        <span v-if="usageFailed" data-testid="official-usage-notice">
+          {{ t('userSubscriptions.officialUsage.requestFailed') }}
+        </span>
+        <button
+          type="button"
+          data-testid="official-usage-refresh"
+          class="rounded-lg border border-gray-200 px-2.5 py-1 font-medium text-gray-600 transition-colors hover:bg-gray-50 disabled:opacity-50 dark:border-dark-600 dark:text-gray-300 dark:hover:bg-dark-700"
+          :disabled="usageLoading"
+          :title="t('userSubscriptions.officialUsage.title')"
+          @click="loadOfficialUsage"
+        >
+          {{ t('userSubscriptions.officialUsage.refresh') }}
+        </button>
       </div>
     </div>
   </AppLayout>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { useAppStore } from '@/stores/app'
 import subscriptionsAPI from '@/api/subscriptions'
-import type { UserSubscription } from '@/types'
+import type {
+  UserSubscription,
+  OfficialSubscriptionUsage,
+  OfficialUsageWindow,
+  SubscriptionUsageItem
+} from '@/types'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import Icon from '@/components/icons/Icon.vue'
 import { formatDateTimeToMinute } from '@/utils/format'
@@ -301,6 +400,102 @@ async function loadSubscriptions() {
   } finally {
     loading.value = false
   }
+}
+
+// ==================== Official upstream subscription usage ====================
+
+const usageByGroup = ref(new Map<number, SubscriptionUsageItem>())
+const usageLoading = ref(false)
+const usageFailed = ref(false)
+
+const hasActiveSubscriptions = computed(() => subscriptions.value.some((s) => s.status === 'active'))
+
+const OFFICIAL_WINDOWS = [
+  { key: 'five_hour', labelKey: 'userSubscriptions.officialUsage.fiveHour' },
+  { key: 'seven_day', labelKey: 'userSubscriptions.officialUsage.sevenDay' },
+  { key: 'seven_day_sonnet', labelKey: 'userSubscriptions.officialUsage.sevenDaySonnet' },
+  { key: 'seven_day_fable', labelKey: 'userSubscriptions.officialUsage.sevenDayFable' }
+] as const
+
+async function loadOfficialUsage() {
+  if (usageLoading.value) return
+  usageLoading.value = true
+  try {
+    const items = await subscriptionsAPI.getSubscriptionUsage()
+    const next = new Map<number, SubscriptionUsageItem>()
+    for (const item of items || []) next.set(item.group_id, item)
+    usageByGroup.value = next
+    usageFailed.value = false
+  } catch (error) {
+    console.error('Failed to load official subscription usage:', error)
+    usageFailed.value = true
+  } finally {
+    usageLoading.value = false
+  }
+}
+
+function showOfficialUsageSection(subscription: UserSubscription): boolean {
+  if (subscription.status !== 'active') return false
+  if (usageByGroup.value.has(subscription.group_id)) return true
+  return usageLoading.value && !usageFailed.value
+}
+
+function officialUsageFor(subscription: UserSubscription): OfficialSubscriptionUsage | null {
+  return usageByGroup.value.get(subscription.group_id)?.usage ?? null
+}
+
+function officialUsageErrorText(subscription: UserSubscription): string {
+  const item = usageByGroup.value.get(subscription.group_id)
+  if (!item || item.usage) return ''
+  switch (item.error?.type) {
+    case 'not_subscription_group':
+      return t('userSubscriptions.officialUsage.provisioning')
+    case 'no_available_account':
+      return t('userSubscriptions.officialUsage.noAvailableAccount')
+    default:
+      return t('userSubscriptions.officialUsage.unavailable')
+  }
+}
+
+function officialUsageWindows(usage: OfficialSubscriptionUsage | null) {
+  if (!usage) return []
+  const out: Array<{ key: string; labelKey: string; window: OfficialUsageWindow }> = []
+  for (const w of OFFICIAL_WINDOWS) {
+    const window = usage[w.key]
+    if (window) out.push({ key: w.key, labelKey: w.labelKey, window })
+  }
+  return out
+}
+
+function clampPercent(utilization: number | null | undefined): number {
+  const v = Number(utilization)
+  if (!Number.isFinite(v)) return 0
+  return Math.min(Math.max(v, 0), 100)
+}
+
+function officialPercent(utilization: number | null | undefined): number {
+  return Math.round(clampPercent(utilization))
+}
+
+const pad2 = (n: number) => String(n).padStart(2, '0')
+
+function formatClock(value: string | null | undefined): string {
+  if (!value) return ''
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return ''
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`
+}
+
+/** Mirrors the /quota command: "HH:mm" when the reset is today (local), otherwise "MM-DD HH:mm". */
+function formatResetsAt(value: string | null | undefined): string {
+  if (!value) return ''
+  const d = new Date(value)
+  if (Number.isNaN(d.getTime())) return ''
+  const now = new Date()
+  const sameDay =
+    d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate()
+  const clock = `${pad2(d.getHours())}:${pad2(d.getMinutes())}`
+  return sameDay ? clock : `${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${clock}`
 }
 
 function getProgressWidth(used: number | undefined, limit: number | null | undefined): string {
@@ -388,7 +583,10 @@ function formatResetTime(windowStart: string | null, windowHours: number): strin
   return parts ? formatDurationParts(parts) : t('userSubscriptions.windowNotActive')
 }
 
-onMounted(() => {
-  loadSubscriptions()
+onMounted(async () => {
+  await loadSubscriptions()
+  if (hasActiveSubscriptions.value) {
+    void loadOfficialUsage()
+  }
 })
 </script>

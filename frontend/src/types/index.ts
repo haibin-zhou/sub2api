@@ -2204,6 +2204,36 @@ export interface UserSubscription {
   group?: Group
 }
 
+/** One official upstream usage window (same shape as GET /v1/subscription-usage). */
+export interface OfficialUsageWindow {
+  utilization: number
+  resets_at: string | null
+  remaining_seconds: number
+}
+
+/** Official upstream subscription usage for a group (no account identity). */
+export interface OfficialSubscriptionUsage {
+  plan?: string
+  five_hour?: OfficialUsageWindow
+  seven_day?: OfficialUsageWindow
+  seven_day_sonnet?: OfficialUsageWindow
+  seven_day_fable?: OfficialUsageWindow
+  updated_at?: string
+}
+
+export type OfficialUsageErrorType =
+  | 'not_subscription_group'
+  | 'no_available_account'
+  | 'upstream_usage_error'
+  | 'api_error'
+
+/** Item of GET /api/v1/subscriptions/usage — one per active subscription group. */
+export interface SubscriptionUsageItem {
+  group_id: number
+  usage: OfficialSubscriptionUsage | null
+  error?: { type: OfficialUsageErrorType | string; message: string }
+}
+
 export interface SubscriptionProgress {
   subscription_id: number
   daily: {

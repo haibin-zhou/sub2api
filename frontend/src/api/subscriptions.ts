@@ -4,7 +4,7 @@
  */
 
 import { apiClient } from './client'
-import type { UserSubscription, SubscriptionProgress } from '@/types'
+import type { UserSubscription, SubscriptionProgress, SubscriptionUsageItem } from '@/types'
 
 /**
  * Subscription summary for user dashboard
@@ -67,10 +67,19 @@ export async function getSubscriptionProgress(
   return response.data
 }
 
+/**
+ * Get official upstream subscription usage for each of the current user's active subscription groups
+ */
+export async function getSubscriptionUsage(): Promise<SubscriptionUsageItem[]> {
+  const response = await apiClient.get<SubscriptionUsageItem[]>('/subscriptions/usage')
+  return response.data
+}
+
 export default {
   getMySubscriptions,
   getActiveSubscriptions,
   getSubscriptionsProgress,
   getSubscriptionSummary,
-  getSubscriptionProgress
+  getSubscriptionProgress,
+  getSubscriptionUsage
 }
