@@ -23,6 +23,10 @@ func (f fakeSubUsageGetter) GetForAPIKey(context.Context, *service.APIKey) (*ser
 	return f.out, f.err
 }
 
+func (f fakeSubUsageGetter) GetForGroup(context.Context, int64) (*service.SubscriptionUsage, error) {
+	return f.out, f.err
+}
+
 func runSubUsage(t *testing.T, g subscriptionUsageGetter, withKey bool) *httptest.ResponseRecorder {
 	t.Helper()
 	gin.SetMode(gin.TestMode)

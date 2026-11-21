@@ -140,3 +140,38 @@ func TestSubscriptionUsage_JSONHasNoAccountIdentity(t *testing.T) {
 	require.Contains(t, s, `"five_hour"`)
 	require.NotContains(t, s, `"seven_day_sonnet"`)
 }
+
+func TestSubscriptionUsage_GetForGroup(t *testing.T) {
+	reset := time.Now().Add(time.Hour)
+	l := &fakeSubUsageLister{accounts: []Account{subAcc(3, 50, 1), subAcc(4, 10, 20)}}
+	f := &fakeSubUsageFetcher{info: &UsageInfo{SubscriptionTier: " Pro ",
+		SevenDay: &UsageProgress{Utilization: 12, ResetsAt: &reset}}}
+	got, err := newSubSvc(l, f).GetForGroup(context.Background(), 7)
+	require.NoError(t, err)
+	require.Equal(t, int64(7), l.gotGroup)
+	require.Equal(t, int64(4), f.gotID)
+	require.False(t, f.gotForced)
+	require.Equal(t, "pro", got.Plan)
+	require.Equal(t, 12.0, got.SevenDay.Utilization)
+}
+
+func TestSubscriptionUsage_GetForGroupErrors(t *testing.T) {
+	apiKeyAcc := subAcc(1, 1, 1)
+	apiKeyAcc.Type = AccountTypeAPIKey
+	_, err := newSubSvc(&fakeSubUsageLister{accounts: []Account{apiKeyAcc}}, &fakeSubUsageFetcher{}).GetForGroup(context.Background(), 7)
+	require.ErrorIs(t, err, ErrSubscriptionUsageNotSubscriptionGroup)
+
+	paused := subAcc(1, 1, 1)
+	paused.Schedulable = false
+	_, err = newSubSvc(&fakeSubUsageLister{accounts: []Account{paused}}, &fakeSubUsageFetcher{}).GetForGroup(context.Background(), 7)
+	require.ErrorIs(t, err, ErrSubscriptionUsageNoAvailableAccount)
+
+	_, err = newSubSvc(&fakeSubUsageLister{accounts: []Account{subAcc(1, 1, 1)}}, &fakeSubUsageFetcher{err: errors.New("boom secret-name")}).GetForGroup(context.Background(), 7)
+	require.ErrorIs(t, err, ErrSubscriptionUsageUpstream)
+
+	_, err = newSubSvc(&fakeSubUsageLister{}, &fakeSubUsageFetcher{}).GetForGroup(context.Background(), 0)
+	require.ErrorIs(t, err, ErrSubscriptionUsageNoGroup)
+
+	_, err = newSubSvc(&fakeSubUsageLister{err: errors.New("db")}, &fakeSubUsageFetcher{}).GetForGroup(context.Background(), 7)
+	require.Error(t, err)
+}

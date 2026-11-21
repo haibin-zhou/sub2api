@@ -55,7 +55,14 @@ func (s *SubscriptionUsageService) GetForAPIKey(ctx context.Context, apiKey *API
 	if apiKey == nil || apiKey.GroupID == nil || *apiKey.GroupID <= 0 {
 		return nil, ErrSubscriptionUsageNoGroup
 	}
-	groupID := *apiKey.GroupID
+	return s.GetForGroup(ctx, *apiKey.GroupID)
+}
+
+// GetForGroup 返回指定分组首选 Anthropic 订阅账号的官方用量（3 分钟缓存，不强制刷新）。
+func (s *SubscriptionUsageService) GetForGroup(ctx context.Context, groupID int64) (*SubscriptionUsage, error) {
+	if groupID <= 0 {
+		return nil, ErrSubscriptionUsageNoGroup
+	}
 	accounts, err := s.accounts.ListByGroup(ctx, groupID)
 	if err != nil {
 		return nil, fmt.Errorf("list group accounts: %w", err)
