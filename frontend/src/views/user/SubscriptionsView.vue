@@ -419,13 +419,13 @@ const OFFICIAL_WINDOWS = [
 
 async function loadOfficialUsage() {
   if (usageLoading.value) return
+  usageFailed.value = false
   usageLoading.value = true
   try {
     const items = await subscriptionsAPI.getSubscriptionUsage()
     const next = new Map<number, SubscriptionUsageItem>()
     for (const item of items || []) next.set(item.group_id, item)
     usageByGroup.value = next
-    usageFailed.value = false
   } catch (error) {
     console.error('Failed to load official subscription usage:', error)
     usageFailed.value = true
@@ -451,6 +451,7 @@ function officialUsageFor(subscription: UserSubscription): OfficialSubscriptionU
 }
 
 function officialUsageErrorText(subscription: UserSubscription): string {
+  if (!isOfficialUsageEligible(subscription)) return ''
   const item = usageByGroup.value.get(subscription.group_id)
   if (!item || item.usage) return ''
   switch (item.error?.type) {

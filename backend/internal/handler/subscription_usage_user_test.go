@@ -78,7 +78,8 @@ func runUserSubUsage(t *testing.T, g *fakeGroupUsage, subs *fakeActiveSubs, user
 }
 
 func activeSub(id, groupID int64) service.UserSubscription {
-	return service.UserSubscription{ID: id, GroupID: groupID, Status: service.SubscriptionStatusActive, ExpiresAt: time.Now().Add(24 * time.Hour)}
+	return service.UserSubscription{ID: id, GroupID: groupID, Status: service.SubscriptionStatusActive, ExpiresAt: time.Now().Add(24 * time.Hour),
+		Group: &service.Group{ID: groupID, Platform: service.PlatformAnthropic}}
 }
 
 func TestSubscriptionUsageUser_MixedResults(t *testing.T) {
@@ -107,13 +108,18 @@ func TestSubscriptionUsageUser_MixedResults(t *testing.T) {
 	require.Equal(t, 42.0, resp.Data[0].Usage.FiveHour.Utilization)
 	require.Nil(t, resp.Data[0].Error)
 
-	wantTypes := []string{"not_subscription_group", "upstream_usage_error", "no_available_account", "api_error"}
-	for i, typ := range wantTypes {
+	want := []struct{ typ, msg string }{
+		{"not_subscription_group", "This group is not backed by a Claude subscription"},
+		{"upstream_usage_error", "Failed to query subscription usage upstream"},
+		{"no_available_account", "No subscription account is currently available in this group"},
+		{"api_error", "Internal error"},
+	}
+	for i, tc := range want {
 		item := resp.Data[i+1]
-		require.Nil(t, item.Usage, typ)
-		require.NotNil(t, item.Error, typ)
-		require.Equal(t, typ, item.Error.Type)
-		require.NotEmpty(t, item.Error.Message)
+		require.Nil(t, item.Usage, tc.typ)
+		require.NotNil(t, item.Error, tc.typ)
+		require.Equal(t, tc.typ, item.Error.Type)
+		require.Equal(t, tc.msg, item.Error.Message)
 	}
 	require.NotContains(t, g.called, int64(999), "client-supplied group_id must be ignored")
 }
@@ -153,4 +159,20 @@ func TestSubscriptionUsageUser_ListError(t *testing.T) {
 	w := runUserSubUsage(t, &fakeGroupUsage{}, &fakeActiveSubs{err: errors.New("db secret-name")}, 5)
 	require.GreaterOrEqual(t, w.Code, 500)
 	require.NotContains(t, w.Body.String(), "secret-name")
+}
+
+func TestSubscriptionUsageUser_OnlyAnthropicGroups(t *testing.T) {
+	g := &fakeGroupUsage{byID: map[int64]*service.SubscriptionUsage{1: {}, 2: {}, 3: {}}}
+	openai := activeSub(11, 2)
+	openai.Group = &service.Group{ID: 2, Platform: service.PlatformOpenAI}
+	noGroup := activeSub(12, 3)
+	noGroup.Group = nil
+	w := runUserSubUsage(t, g, &fakeActiveSubs{subs: []service.UserSubscription{activeSub(10, 1), openai, noGroup}}, 5)
+	require.Equal(t, http.StatusOK, w.Code)
+	var resp userUsageResp
+	require.NoError(t, json.Unmarshal(w.Body.Bytes(), &resp))
+	require.Len(t, resp.Data, 1)
+	require.Equal(t, int64(1), resp.Data[0].GroupID)
+	require.NotContains(t, g.called, int64(2))
+	require.NotContains(t, g.called, int64(3))
 }

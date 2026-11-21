@@ -66,7 +66,8 @@ func (h *SubscriptionUsageHandler) ListForUser(c *gin.Context) {
 	seen := make(map[int64]struct{}, len(subs))
 	for i := range subs {
 		sub := &subs[i]
-		if !sub.IsActive() || sub.GroupID <= 0 {
+		// 官方订阅用量只对 Anthropic 分组有意义；Group 由 ListActiveByUserID 预加载。
+		if !sub.IsActive() || sub.GroupID <= 0 || sub.Group == nil || sub.Group.Platform != service.PlatformAnthropic {
 			continue
 		}
 		if _, dup := seen[sub.GroupID]; dup {

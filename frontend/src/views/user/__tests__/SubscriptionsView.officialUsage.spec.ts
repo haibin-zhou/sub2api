@@ -178,6 +178,32 @@ describe('SubscriptionsView official subscription usage', () => {
     expect(showError).not.toHaveBeenCalled()
   })
 
+  it('refresh after a failure clears the notice and shows the per-card spinner', async () => {
+    getMySubscriptions.mockResolvedValue([sub(10, 1)])
+    getSubscriptionUsage.mockRejectedValueOnce(new Error('boom'))
+    const wrapper = mountView()
+    await flushPromises()
+    expect(wrapper.find('[data-testid="official-usage-notice"]').exists()).toBe(true)
+
+    let resolveUsage: (v: unknown) => void = () => {}
+    getSubscriptionUsage.mockReturnValueOnce(new Promise((r) => { resolveUsage = r }))
+    await wrapper.get('[data-testid="official-usage-refresh"]').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('[data-testid="official-usage-notice"]').exists()).toBe(false)
+    expect(wrapper.find('[data-testid="official-usage-loading-1"]').exists()).toBe(true)
+
+    resolveUsage([{ group_id: 1, usage: { five_hour: { utilization: 33, resets_at: null, remaining_seconds: 0 } } }])
+    await flushPromises()
+    expect(wrapper.get('[data-testid="official-usage-1"]').text()).toContain('33%')
+  })
+
+  it('does not show error text for non-anthropic cards even if an item is returned', async () => {
+    getMySubscriptions.mockResolvedValue([sub(11, 2, {}, 'openai')])
+    const wrapper = mountView()
+    await flushPromises()
+    expect(wrapper.text()).not.toContain('userSubscriptions.officialUsage')
+  })
+
   it('shows loading per card, then refresh re-calls the endpoint', async () => {
     getMySubscriptions.mockResolvedValue([sub(10, 1)])
     let resolveUsage: (v: unknown) => void = () => {}
