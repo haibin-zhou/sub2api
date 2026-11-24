@@ -115,6 +115,46 @@ func TestSubscriptionUsage_NoAvailableAccount(t *testing.T) {
 	require.ErrorIs(t, err, ErrSubscriptionUsageNoAvailableAccount)
 }
 
+func TestSubscriptionUsage_FallsBackToRateLimitedOrOverloadedAccount(t *testing.T) {
+	future := time.Now().Add(time.Hour)
+	limitedLowPrio := subAcc(5, 20, 1)
+	limitedLowPrio.RateLimitResetAt = &future
+	overloadedHighPrio := subAcc(6, 10, 1)
+	overloadedHighPrio.OverloadUntil = &future
+	paused := subAcc(1, 1, 1)
+	paused.Schedulable = false
+
+	f := &fakeSubUsageFetcher{info: &UsageInfo{
+		FiveHour: &UsageProgress{Utilization: 100, ResetsAt: &future, RemainingSeconds: 3600},
+	}}
+	got, err := newSubSvc(&fakeSubUsageLister{accounts: []Account{limitedLowPrio, overloadedHighPrio, paused}}, f).
+		GetForGroup(context.Background(), 7)
+	require.NoError(t, err)
+	require.Equal(t, int64(6), f.gotID)
+	require.Equal(t, 100.0, got.FiveHour.Utilization)
+}
+
+func TestSubscriptionUsage_DoesNotFallbackToDisabledExpiredOrTempUnschedulable(t *testing.T) {
+	past := time.Now().Add(-time.Hour)
+	future := time.Now().Add(time.Hour)
+
+	disabled := subAcc(1, 1, 1)
+	disabled.Status = StatusDisabled
+	errored := subAcc(2, 1, 1)
+	errored.Status = StatusError
+	paused := subAcc(3, 1, 1)
+	paused.Schedulable = false
+	expired := subAcc(4, 1, 1)
+	expired.AutoPauseOnExpired = true
+	expired.ExpiresAt = &past
+	tempUnsched := subAcc(5, 1, 1)
+	tempUnsched.TempUnschedulableUntil = &future
+
+	_, err := newSubSvc(&fakeSubUsageLister{accounts: []Account{disabled, errored, paused, expired, tempUnsched}}, &fakeSubUsageFetcher{}).
+		GetForGroup(context.Background(), 7)
+	require.ErrorIs(t, err, ErrSubscriptionUsageNoAvailableAccount)
+}
+
 func TestSubscriptionUsage_UpstreamErrorWrapped(t *testing.T) {
 	f := &fakeSubUsageFetcher{err: errors.New("401 for account secret-name")}
 	_, err := newSubSvc(&fakeSubUsageLister{accounts: []Account{subAcc(1, 1, 1)}}, f).

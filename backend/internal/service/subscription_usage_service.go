@@ -90,25 +90,49 @@ func selectSubscriptionAccount(accounts []Account, groupID int64) (*Account, err
 		return nil, ErrSubscriptionUsageNotSubscriptionGroup
 	}
 	var available []*Account
+	var fallback []*Account
+	now := time.Now()
 	for _, a := range subscription {
 		if a.IsSchedulable() {
 			available = append(available, a)
+		} else if isTemporarilyUnschedulableForUsage(a, now) {
+			fallback = append(fallback, a)
 		}
 	}
-	if len(available) == 0 {
+	candidates := available
+	if len(candidates) == 0 {
+		candidates = fallback
+	}
+	if len(candidates) == 0 {
 		return nil, ErrSubscriptionUsageNoAvailableAccount
 	}
-	sort.SliceStable(available, func(i, j int) bool {
-		gi, gj := accountGroupPriority(available[i], groupID), accountGroupPriority(available[j], groupID)
+	sort.SliceStable(candidates, func(i, j int) bool {
+		gi, gj := accountGroupPriority(candidates[i], groupID), accountGroupPriority(candidates[j], groupID)
 		if gi != gj {
 			return gi < gj
 		}
-		if available[i].Priority != available[j].Priority {
-			return available[i].Priority < available[j].Priority
+		if candidates[i].Priority != candidates[j].Priority {
+			return candidates[i].Priority < candidates[j].Priority
 		}
-		return available[i].ID < available[j].ID
+		return candidates[i].ID < candidates[j].ID
 	})
-	return available[0], nil
+	return candidates[0], nil
+}
+
+// isTemporarilyUnschedulableForUsage 判断账号是否仍处于有效启用状态、仅因限流/过载/配额上限等
+// 临时原因不可调度；此时仍可查询官方订阅用量（使用满限流时可展示 100% 与重置时间）。
+// 禁用、异常、手动暂停、已过期或处于凭据/传输冷却期（TempUnschedulableUntil）的账号不参与回退。
+func isTemporarilyUnschedulableForUsage(a *Account, now time.Time) bool {
+	if !a.IsActive() || !a.Schedulable {
+		return false
+	}
+	if a.AutoPauseOnExpired && a.ExpiresAt != nil && !now.Before(*a.ExpiresAt) {
+		return false
+	}
+	if a.TempUnschedulableUntil != nil && now.Before(*a.TempUnschedulableUntil) {
+		return false
+	}
+	return true
 }
 
 // accountGroupPriority 返回账号在该分组内的优先级；未加载关联时按 schema 默认值 50。
