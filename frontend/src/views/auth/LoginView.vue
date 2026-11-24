@@ -560,6 +560,15 @@ function validateForm(): boolean {
 
 // ==================== Form Handlers ====================
 
+async function navigateAfterLogin(): Promise<void> {
+  const redirectTo = (router.currentRoute.value.query.redirect as string) || '/dashboard'
+  if (redirectTo === '/guide.html') {
+    window.location.assign('/guide.html')
+    return
+  }
+  await router.push(redirectTo)
+}
+
 async function handleLogin(): Promise<void> {
   // Clear previous error
   errorMessage.value = ''
@@ -603,8 +612,7 @@ async function handleLogin(): Promise<void> {
     appStore.showSuccess(t('auth.loginSuccess'))
 
     // Redirect to dashboard or intended route
-    const redirectTo = (router.currentRoute.value.query.redirect as string) || '/dashboard'
-    await router.push(redirectTo)
+    await navigateAfterLogin()
   } catch (error: unknown) {
     errorMessage.value = extractI18nErrorMessage(error, t, 'auth.errors', t('auth.loginFailed'))
 
@@ -644,8 +652,7 @@ async function handlePasskeyLogin(): Promise<void> {
     await authStore.loginWithPasskey(proof)
     clearAllAffiliateReferralCodes()
     appStore.showSuccess(t('auth.loginSuccess'))
-    const redirectTo = (router.currentRoute.value.query.redirect as string) || '/dashboard'
-    await router.push(redirectTo)
+    await navigateAfterLogin()
   } catch (error: unknown) {
     const fallback = error instanceof DOMException && error.name === 'NotAllowedError'
       ? t('auth.passkeyCancelled')
@@ -713,8 +720,7 @@ async function handle2FAVerify(code: string): Promise<void> {
     appStore.showSuccess(t('auth.loginSuccess'))
 
     // Redirect to dashboard or intended route
-    const redirectTo = (router.currentRoute.value.query.redirect as string) || '/dashboard'
-    await router.push(redirectTo)
+    await navigateAfterLogin()
   } catch (error: unknown) {
     const err = error as { message?: string; response?: { data?: { message?: string } } }
     const message = err.response?.data?.message || err.message || t('profile.totp.loginFailed')

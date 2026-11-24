@@ -1,0 +1,661 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Goreach 使用手册 · 注册订阅、密钥配置与接入 AI 平台</title>
+    <meta
+      name="description"
+      content="Goreach 使用手册：账号注册与订阅支付、控制台 API 密钥创建、CC Switch（Claude Code / Claude 桌面端）与 WorkBuddy 的接入配置指引。"
+    />
+    <link rel="stylesheet" href="./guide/guide.css" />
+  </head>
+  <body class="auth-pending">
+    <div id="auth-gate" class="auth-gate" role="status" aria-live="polite">
+      <div class="auth-gate-card">
+        <div class="auth-spinner" aria-hidden="true"></div>
+        <p class="auth-gate-title">正在验证登录状态…</p>
+        <p class="auth-gate-desc">该使用手册仅限已登录的 Goreach 用户访问。</p>
+        <noscript>
+          <div class="auth-noscript">
+            <div>请启用 JavaScript 并登录后查看使用手册。</div>
+            <a class="nav-btn nav-btn-primary" href="/login?redirect=%2Fguide.html">前往登录</a>
+          </div>
+        </noscript>
+      </div>
+    </div>
+
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a class="brand" href="#top">
+          <span class="brand-mark">G</span>
+          <span>goreach.es</span>
+          <span class="brand-sub">使用手册</span>
+        </a>
+        <nav class="topbar-actions" aria-label="快捷入口">
+          <button
+            type="button"
+            id="theme-toggle"
+            class="nav-btn nav-btn-icon"
+            aria-label="切换深浅色模式"
+            title="切换深浅色模式"
+          >
+            ☾
+          </button>
+          <a class="nav-btn" href="/subscriptions">我的订阅</a>
+          <a class="nav-btn nav-btn-primary" href="/keys">返回 API 密钥</a>
+        </nav>
+      </div>
+    </header>
+
+    <div class="layout" id="top">
+      <aside class="toc" aria-label="目录导航">
+        <p class="toc-title">目录导航</p>
+        <ul class="toc-list">
+          <li><a class="toc-link" href="#register-pay">一、注册和支付</a></li>
+          <li><a class="toc-link is-sub" href="#register">（一）注册账号</a></li>
+          <li><a class="toc-link is-sub" href="#subscribe">（二）支付订阅</a></li>
+          <li><a class="toc-link" href="#console-config">二、控制台配置</a></li>
+          <li><a class="toc-link is-sub" href="#view-subscription">（一）查看订阅信息</a></li>
+          <li><a class="toc-link is-sub" href="#create-api-key">（二）创建 API 密钥</a></li>
+          <li><a class="toc-link" href="#integrate-ai">三、接入 AI 平台</a></li>
+          <li><a class="toc-link is-sub" href="#common-params">通用配置参数速查</a></li>
+          <li><a class="toc-link is-sub" href="#cc-switch-claude-code">（一）CC Switch 配置 Claude Code</a></li>
+          <li><a class="toc-link is-sub" href="#claude-desktop">（二）配置 Claude 桌面端</a></li>
+          <li><a class="toc-link is-sub" href="#workbuddy">（三）配置 WorkBuddy</a></li>
+        </ul>
+      </aside>
+
+      <main class="content">
+        <details class="mobile-toc">
+          <summary>目录导航（点击展开）</summary>
+          <ul class="toc-list">
+            <li><a class="toc-link" href="#register-pay">一、注册和支付</a></li>
+            <li><a class="toc-link is-sub" href="#register">（一）注册账号</a></li>
+            <li><a class="toc-link is-sub" href="#subscribe">（二）支付订阅</a></li>
+            <li><a class="toc-link" href="#console-config">二、控制台配置</a></li>
+            <li><a class="toc-link is-sub" href="#view-subscription">（一）查看订阅信息</a></li>
+            <li><a class="toc-link is-sub" href="#create-api-key">（二）创建 API 密钥</a></li>
+            <li><a class="toc-link" href="#integrate-ai">三、接入 AI 平台</a></li>
+            <li><a class="toc-link is-sub" href="#common-params">通用配置参数速查</a></li>
+            <li><a class="toc-link is-sub" href="#cc-switch-claude-code">（一）CC Switch 配置 Claude Code</a></li>
+            <li><a class="toc-link is-sub" href="#claude-desktop">（二）配置 Claude 桌面端</a></li>
+            <li><a class="toc-link is-sub" href="#workbuddy">（三）配置 WorkBuddy</a></li>
+          </ul>
+        </details>
+
+        <!-- Cover Hero -->
+        <section class="hero">
+          <span class="hero-badge">GOREACH · USER GUIDE</span>
+          <h1>Goreach 使用手册</h1>
+          <p class="hero-subtitle">注册订阅 · 密钥配置 · 接入 AI 平台</p>
+
+          <div class="meta-box">
+            <div class="meta-row">
+              <span class="meta-label">适用对象</span>
+              <span class="meta-value">Goreach 订阅用户</span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">官方网址</span>
+              <span class="meta-value">
+                <span class="code-chip">
+                  <a href="https://www.goreach.es/home" target="_blank" rel="noopener noreferrer">
+                    <code>https://www.goreach.es/home</code>
+                  </a>
+                  <button
+                    type="button"
+                    class="copy-btn"
+                    data-copy="https://www.goreach.es/home"
+                  >
+                    复制
+                  </button>
+                </span>
+              </span>
+            </div>
+            <div class="meta-row">
+              <span class="meta-label">本手册包含</span>
+              <span class="meta-value">
+                账号注册与订阅支付、控制台 API 密钥创建、CC Switch（Claude Code / Claude 桌面端）与 WorkBuddy 的接入配置
+              </span>
+            </div>
+          </div>
+
+          <div class="hero-footer">
+            <span>Goreach 团队</span>
+            <span>提示：点击任意截图可放大查看高清原图</span>
+          </div>
+        </section>
+
+        <!-- Section 1 -->
+        <section class="section" id="register-pay">
+          <div class="section-header">
+            <span class="section-num">一</span>
+            <h2>注册和支付</h2>
+          </div>
+          <p class="section-lead">
+            首先访问 Goreach 官网完成账号注册，并按需选择订阅方案完成支付。
+          </p>
+
+          <div class="table-wrap">
+            <table>
+              <tbody>
+                <tr>
+                  <td>登录域名</td>
+                  <td>
+                    <span class="code-chip">
+                      <a href="https://www.goreach.es/home" target="_blank" rel="noopener noreferrer">
+                        <code>https://www.goreach.es/home</code>
+                      </a>
+                      <button
+                        type="button"
+                        class="copy-btn"
+                        data-copy="https://www.goreach.es/home"
+                      >
+                        复制
+                      </button>
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="subsection" id="register">
+            <h3>（一）注册账号</h3>
+            <p>打开登录域名，按页面提示填写信息完成账号注册。（联系工作人员开通）</p>
+            <figure class="figure">
+              <button type="button" class="figure-btn" aria-label="放大查看：图 1 注册账号">
+                <img src="./guide/images/image1.png" alt="图 1 注册账号" loading="lazy" />
+              </button>
+              <figcaption>
+                <span class="caption-text">图 1 注册账号</span>
+                <span class="zoom-hint">点击放大</span>
+              </figcaption>
+            </figure>
+          </div>
+
+          <div class="subsection" id="subscribe">
+            <h3>（二）支付订阅</h3>
+            <p>注册完成后，选择所需的订阅方案并完成支付。</p>
+            <figure class="figure">
+              <button type="button" class="figure-btn" aria-label="放大查看：图 2 支付订阅">
+                <img src="./guide/images/image2.png" alt="图 2 支付订阅" loading="lazy" />
+              </button>
+              <figcaption>
+                <span class="caption-text">图 2 支付订阅</span>
+                <span class="zoom-hint">点击放大</span>
+              </figcaption>
+            </figure>
+          </div>
+        </section>
+
+        <!-- Section 2 -->
+        <section class="section" id="console-config">
+          <div class="section-header">
+            <span class="section-num">二</span>
+            <h2>控制台配置</h2>
+          </div>
+          <p class="section-lead">
+            订阅生效后，进入控制台查看订阅信息，并创建用于接入 AI 平台的 API 密钥。
+          </p>
+
+          <div class="subsection" id="view-subscription">
+            <h3>（一）查看订阅信息</h3>
+            <figure class="figure">
+              <button type="button" class="figure-btn" aria-label="放大查看：图 3 查看订阅信息">
+                <img src="./guide/images/image3.png" alt="图 3 查看订阅信息" loading="lazy" />
+              </button>
+              <figcaption>
+                <span class="caption-text">图 3 查看订阅信息</span>
+                <span class="zoom-hint">点击放大</span>
+              </figcaption>
+            </figure>
+          </div>
+
+          <div class="subsection" id="create-api-key">
+            <h3>（二）创建 API 密钥</h3>
+
+            <div class="step-item">
+              <p class="step-title">
+                <span class="step-badge">第一步</span>选择订阅所示的分组。
+              </p>
+              <figure class="figure">
+                <button type="button" class="figure-btn" aria-label="放大查看：图 4 选择订阅对应的分组">
+                  <img src="./guide/images/image4.png" alt="图 4 选择订阅对应的分组" loading="lazy" />
+                </button>
+                <figcaption>
+                  <span class="caption-text">图 4 选择订阅对应的分组</span>
+                  <span class="zoom-hint">点击放大</span>
+                </figcaption>
+              </figure>
+            </div>
+
+            <div class="step-item">
+              <p class="step-title">
+                <span class="step-badge">第二步</span>创建密钥。
+              </p>
+              <figure class="figure">
+                <button type="button" class="figure-btn" aria-label="放大查看：图 5 创建密钥">
+                  <img src="./guide/images/image5.png" alt="图 5 创建密钥" loading="lazy" />
+                </button>
+                <figcaption>
+                  <span class="caption-text">图 5 创建密钥</span>
+                  <span class="zoom-hint">点击放大</span>
+                </figcaption>
+              </figure>
+            </div>
+
+            <div class="step-item">
+              <p class="step-title">
+                <span class="step-badge">第三步</span>创建成功，在红框处复制密钥信息。
+              </p>
+              <figure class="figure">
+                <button type="button" class="figure-btn" aria-label="放大查看：图 6 创建成功并复制密钥">
+                  <img src="./guide/images/image6.png" alt="图 6 创建成功并复制密钥" loading="lazy" />
+                </button>
+                <figcaption>
+                  <span class="caption-text">图 6 创建成功并复制密钥</span>
+                  <span class="zoom-hint">点击放大</span>
+                </figcaption>
+              </figure>
+            </div>
+
+            <div class="callout callout-warn" role="note">
+              <span class="callout-icon">!</span>
+              <div>
+                <strong>重要：</strong>API 密钥是您账号的访问凭证，请妥善保管，切勿泄露给他人。
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Section 3 -->
+        <section class="section" id="integrate-ai">
+          <div class="section-header">
+            <span class="section-num">三</span>
+            <h2>接入 AI 平台</h2>
+          </div>
+          <p class="section-lead">
+            获取 API 密钥后，即可在常用 AI 工具中接入 Goreach。各平台通用的配置参数如下：
+          </p>
+
+          <div class="subsection" id="common-params">
+            <h3>通用配置参数速查</h3>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>参数项</th>
+                    <th>填写内容</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>名称 / 供应商</td>
+                    <td>自定义</td>
+                  </tr>
+                  <tr>
+                    <td>API KEY / API 密钥</td>
+                    <td>复制 Goreach 控制台中创建的 API 密钥</td>
+                  </tr>
+                  <tr>
+                    <td>请求地址 / 接口地址</td>
+                    <td>
+                      <span class="code-chip">
+                        <code>https://www.goreach.es/</code>
+                        <button
+                          type="button"
+                          class="copy-btn"
+                          data-copy="https://www.goreach.es/"
+                        >
+                          复制
+                        </button>
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="subsection" id="cc-switch-claude-code">
+            <h3>（一）CC Switch 配置 Claude Code</h3>
+
+            <div class="table-wrap">
+              <table>
+                <tbody>
+                  <tr>
+                    <td>下载地址</td>
+                    <td>
+                      <span class="code-chip">
+                        <a
+                          href="https://ccswitch.io/zh/docs?section=getting-started"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <code>https://ccswitch.io/zh/docs?section=getting-started</code>
+                        </a>
+                        <button
+                          type="button"
+                          class="copy-btn"
+                          data-copy="https://ccswitch.io/zh/docs?section=getting-started"
+                        >
+                          复制
+                        </button>
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div class="step-item">
+              <p class="step-title">
+                <span class="step-badge">步骤 1</span>左侧选择 Claude Code（Windows PowerShell 命令符界面）。
+              </p>
+              <p class="step-title">
+                <span class="step-badge">步骤 2</span>右侧添加供应商。
+              </p>
+              <figure class="figure">
+                <button type="button" class="figure-btn" aria-label="放大查看：图 7 选择 Claude Code 并添加供应商">
+                  <img src="./guide/images/image7.png" alt="图 7 选择 Claude Code 并添加供应商" loading="lazy" />
+                </button>
+                <figcaption>
+                  <span class="caption-text">图 7 选择 Claude Code 并添加供应商</span>
+                  <span class="zoom-hint">点击放大</span>
+                </figcaption>
+              </figure>
+            </div>
+
+            <div class="step-item">
+              <p class="step-title">
+                <span class="step-badge">步骤 3</span>选择自定义配置。
+              </p>
+              <ul class="param-list">
+                <li><strong>名称：</strong>自定义</li>
+                <li><strong>API KEY：</strong>复制 Goreach API 密钥里面的信息</li>
+                <li>
+                  <strong>请求地址：</strong>
+                  <span class="code-chip">
+                    <code>https://www.goreach.es/</code>
+                    <button
+                      type="button"
+                      class="copy-btn"
+                      data-copy="https://www.goreach.es/"
+                    >
+                      复制
+                    </button>
+                  </span>
+                </li>
+              </ul>
+              <figure class="figure">
+                <button type="button" class="figure-btn" aria-label="放大查看：图 8 填写自定义配置">
+                  <img src="./guide/images/image8.png" alt="图 8 填写自定义配置" loading="lazy" />
+                </button>
+                <figcaption>
+                  <span class="caption-text">图 8 填写自定义配置</span>
+                  <span class="zoom-hint">点击放大</span>
+                </figcaption>
+              </figure>
+            </div>
+
+            <div class="step-item">
+              <p class="step-title">
+                <span class="step-badge">步骤 4</span>点击刚刚创建完成的供应商，在右侧红框处选择使用的目录，然后打开终端。
+              </p>
+              <figure class="figure">
+                <button type="button" class="figure-btn" aria-label="放大查看：图 9 选择目录并打开终端">
+                  <img src="./guide/images/image9.png" alt="图 9 选择目录并打开终端" loading="lazy" />
+                </button>
+                <figcaption>
+                  <span class="caption-text">图 9 选择目录并打开终端</span>
+                  <span class="zoom-hint">点击放大</span>
+                </figcaption>
+              </figure>
+            </div>
+
+            <div class="step-item">
+              <p class="step-title">
+                <span class="step-badge">步骤 5</span>成功打开 Claude Code 控制界面。
+              </p>
+              <figure class="figure">
+                <button type="button" class="figure-btn" aria-label="放大查看：图 10 Claude Code 控制界面">
+                  <img src="./guide/images/image10.png" alt="图 10 Claude Code 控制界面" loading="lazy" />
+                </button>
+                <figcaption>
+                  <span class="caption-text">图 10 Claude Code 控制界面</span>
+                  <span class="zoom-hint">点击放大</span>
+                </figcaption>
+              </figure>
+            </div>
+          </div>
+
+          <div class="subsection" id="claude-desktop">
+            <h3>（二）配置 Claude 桌面端</h3>
+            <p>如果已经安装 Claude Code 桌面端，配置步骤如下：</p>
+
+            <div class="step-item">
+              <p class="step-title">
+                <span class="step-badge">步骤 1</span>左侧选择 Claude Desktop，右侧添加供应商。
+              </p>
+              <figure class="figure">
+                <button type="button" class="figure-btn" aria-label="放大查看：图 11 选择 Claude Desktop 并添加供应商">
+                  <img src="./guide/images/image11.png" alt="图 11 选择 Claude Desktop 并添加供应商" loading="lazy" />
+                </button>
+                <figcaption>
+                  <span class="caption-text">图 11 选择 Claude Desktop 并添加供应商</span>
+                  <span class="zoom-hint">点击放大</span>
+                </figcaption>
+              </figure>
+            </div>
+
+            <div class="step-item">
+              <p class="step-title">
+                <span class="step-badge">步骤 2</span>选择自定义配置。
+              </p>
+              <ul class="param-list">
+                <li><strong>名称：</strong>自定义</li>
+                <li><strong>API KEY：</strong>复制 Goreach API 密钥里面的信息</li>
+                <li>
+                  <strong>请求地址：</strong>
+                  <span class="code-chip">
+                    <code>https://www.goreach.es/</code>
+                    <button
+                      type="button"
+                      class="copy-btn"
+                      data-copy="https://www.goreach.es/"
+                    >
+                      复制
+                    </button>
+                  </span>
+                </li>
+              </ul>
+              <figure class="figure">
+                <button type="button" class="figure-btn" aria-label="放大查看：图 12 填写自定义配置">
+                  <img src="./guide/images/image12.png" alt="图 12 填写自定义配置" loading="lazy" />
+                </button>
+                <figcaption>
+                  <span class="caption-text">图 12 填写自定义配置</span>
+                  <span class="zoom-hint">点击放大</span>
+                </figcaption>
+              </figure>
+            </div>
+
+            <div class="step-item">
+              <p class="step-title">
+                <span class="step-badge">步骤 3</span>配置完成后，打开电脑上安装的 Claude Code 应用，重新登录连接即可使用。
+              </p>
+              <figure class="figure">
+                <button type="button" class="figure-btn" aria-label="放大查看：图 13 重新登录后即可使用">
+                  <img src="./guide/images/image13.png" alt="图 13 重新登录后即可使用" loading="lazy" />
+                </button>
+                <figcaption>
+                  <span class="caption-text">图 13 重新登录后即可使用</span>
+                  <span class="zoom-hint">点击放大</span>
+                </figcaption>
+              </figure>
+            </div>
+          </div>
+
+          <div class="subsection" id="workbuddy">
+            <h3>（三）配置 WorkBuddy</h3>
+
+            <div class="step-item">
+              <p class="step-title">
+                <span class="step-badge">步骤 1</span>选择配置自定义模型。
+              </p>
+              <figure class="figure">
+                <button type="button" class="figure-btn" aria-label="放大查看：图 14 进入自定义模型配置">
+                  <img src="./guide/images/image14.png" alt="图 14 进入自定义模型配置" loading="lazy" />
+                </button>
+                <figcaption>
+                  <span class="caption-text">图 14 进入自定义模型配置</span>
+                  <span class="zoom-hint">点击放大</span>
+                </figcaption>
+              </figure>
+            </div>
+
+            <div class="step-item">
+              <p class="step-title">
+                <span class="step-badge">步骤 2</span>按下表填写配置信息。
+              </p>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>配置项</th>
+                      <th>填写内容</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>供应商</td>
+                      <td>自定义</td>
+                    </tr>
+                    <tr>
+                      <td>接口地址</td>
+                      <td>
+                        <span class="code-chip">
+                          <code>https://www.goreach.es/</code>
+                          <button
+                            type="button"
+                            class="copy-btn"
+                            data-copy="https://www.goreach.es/"
+                          >
+                            复制
+                          </button>
+                        </span>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>API 密钥</td>
+                      <td>复制 Goreach 里面配置的 API 密钥</td>
+                    </tr>
+                    <tr>
+                      <td>模型名称</td>
+                      <td>
+                        <span class="code-chip">
+                          <code>claude-opus-5-5</code>
+                          <button
+                            type="button"
+                            class="copy-btn"
+                            data-copy="claude-opus-5-5"
+                          >
+                            复制
+                          </button>
+                        </span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="callout callout-info" role="note">
+                <span class="callout-icon">i</span>
+                <div>
+                  <strong>提示：</strong>WorkBuddy 每次只能添加一个模型。如需使用其他模型，可重复以上自定义步骤多次添加。
+                </div>
+              </div>
+
+              <div class="figure-grid">
+                <figure class="figure">
+                  <button type="button" class="figure-btn" aria-label="放大查看：图 15 填写自定义模型信息">
+                    <img src="./guide/images/image15.png" alt="图 15 填写自定义模型信息" loading="lazy" />
+                  </button>
+                  <figcaption>
+                    <span class="caption-text">图 15 填写自定义模型信息</span>
+                    <span class="zoom-hint">点击放大</span>
+                  </figcaption>
+                </figure>
+                <figure class="figure">
+                  <button type="button" class="figure-btn" aria-label="放大查看：图 16 配置完成">
+                    <img src="./guide/images/image16.png" alt="图 16 配置完成" loading="lazy" />
+                  </button>
+                  <figcaption>
+                    <span class="caption-text">图 16 配置完成</span>
+                    <span class="zoom-hint">点击放大</span>
+                  </figcaption>
+                </figure>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <footer class="guide-footer">
+          <p class="guide-footer-line">— 配置完成，祝您使用愉快 —</p>
+          <p>Goreach 团队 · <a href="/keys">返回 API 密钥页面</a></p>
+        </footer>
+      </main>
+    </div>
+
+    <button
+      type="button"
+      id="back-to-top"
+      class="back-to-top"
+      aria-label="返回顶部"
+      title="返回顶部"
+    >
+      ↑
+    </button>
+
+    <div
+      id="lightbox"
+      class="lightbox"
+      role="dialog"
+      aria-modal="true"
+      aria-hidden="true"
+      aria-label="图片大图预览"
+    >
+      <button
+        type="button"
+        id="lightbox-close"
+        class="lightbox-close"
+        aria-label="关闭预览"
+      >
+        ×
+      </button>
+      <button
+        type="button"
+        id="lightbox-prev"
+        class="lightbox-nav lightbox-prev"
+        aria-label="上一张"
+      >
+        ‹
+      </button>
+      <div class="lightbox-inner">
+        <img id="lightbox-img" class="lightbox-img" src="" alt="" />
+        <p id="lightbox-caption" class="lightbox-caption"></p>
+      </div>
+      <button
+        type="button"
+        id="lightbox-next"
+        class="lightbox-nav lightbox-next"
+        aria-label="下一张"
+      >
+        ›
+      </button>
+    </div>
+
+    <script src="./guide/guide.js" defer></script>
+  </body>
+</html>

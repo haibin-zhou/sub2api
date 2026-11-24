@@ -42,6 +42,7 @@ const messages: Record<string, string> = {
   'keys.allStatus': 'All Status',
   'keys.columnSettings': 'Column Settings',
   'keys.createKey': 'Create API Key',
+  'keys.usageGuide': 'Usage Guide',
   'keys.created': 'Created',
   'keys.expiresAt': 'Expires',
   'keys.group': 'Group',
@@ -685,6 +686,17 @@ describe('user KeysView column settings', () => {
       expect(wrapper.find('[data-test="usage-pending"]').exists()).toBe(false)
       expect(wrapper.get('[data-test="usage"]').text()).toContain('$0.0000')
       consoleError.mockRestore()
+    })
+  })
+
+  describe('usage guide link', () => {
+    it('renders the usage guide link in the actions toolbar', async () => {
+      const wrapper = await mountView()
+      const link = wrapper.get('[data-test="keys-guide-link"]')
+      expect(link.attributes('href')).toBe('/guide.html')
+      expect(link.attributes('target')).toBe('_blank')
+      expect(link.attributes('rel')).toBe('noopener noreferrer')
+      expect(link.text()).toContain('Usage Guide')
     })
   })
 })

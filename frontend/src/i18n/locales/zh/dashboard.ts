@@ -81,6 +81,7 @@ export default {
     allStatus: '全部状态',
     columnSettings: '列设置',
     columnAlwaysVisible: '该列固定显示，不可隐藏',
+    usageGuide: '使用手册',
     createKey: '创建密钥',
     editKey: '编辑密钥',
     bulkEdit: {

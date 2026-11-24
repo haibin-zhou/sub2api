@@ -48,7 +48,18 @@
       </template>
 
       <template #actions>
-        <div class="flex justify-end gap-3">
+        <div class="flex flex-wrap items-center justify-end gap-3">
+          <a
+            href="/guide.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="btn btn-secondary"
+            data-test="keys-guide-link"
+            :title="t('keys.usageGuide')"
+          >
+            <Icon name="document" size="md" class="mr-1.5" />
+            <span>{{ t('keys.usageGuide') }}</span>
+          </a>
           <button
             @click="loadApiKeys"
             :disabled="loading"

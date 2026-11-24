@@ -81,6 +81,7 @@ export default {
     allStatus: 'All Status',
     columnSettings: 'Column Settings',
     columnAlwaysVisible: 'This column is always visible',
+    usageGuide: 'Usage Guide',
     createKey: 'Create API Key',
     editKey: 'Edit API Key',
     bulkEdit: {
