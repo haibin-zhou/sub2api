@@ -690,7 +690,7 @@ describe('user KeysView column settings', () => {
   })
 
   describe('usage guide link', () => {
-    it('renders the usage guide link in the actions toolbar', async () => {
+    it('renders the usage guide link beside the API endpoint bar', async () => {
       const wrapper = await mountView()
       const link = wrapper.get('[data-test="keys-guide-link"]')
       expect(link.attributes('href')).toBe('/guide.html')

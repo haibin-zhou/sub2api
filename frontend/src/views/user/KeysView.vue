@@ -23,11 +23,24 @@
               @update:model-value="onStatusFilterChange"
             />
           </div>
-          <EndpointPopover
-            v-if="publicSettings?.api_base_url || (publicSettings?.custom_endpoints?.length ?? 0) > 0"
-            :api-base-url="publicSettings?.api_base_url || ''"
-            :custom-endpoints="publicSettings?.custom_endpoints || []"
-          />
+          <div class="flex flex-wrap items-center gap-2">
+            <EndpointPopover
+              v-if="publicSettings?.api_base_url || (publicSettings?.custom_endpoints?.length ?? 0) > 0"
+              :api-base-url="publicSettings?.api_base_url || ''"
+              :custom-endpoints="publicSettings?.custom_endpoints || []"
+            />
+            <a
+              href="/guide.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-primary-600 transition-colors hover:border-primary-300 hover:bg-primary-50 dark:border-dark-600 dark:bg-dark-800 dark:text-primary-400 dark:hover:border-primary-700 dark:hover:bg-primary-900/20"
+              data-test="keys-guide-link"
+              :title="t('keys.usageGuide')"
+            >
+              <Icon name="document" size="sm" />
+              <span>{{ t('keys.usageGuide') }}</span>
+            </a>
+          </div>
           <div v-if="selectedIds.length" class="flex flex-wrap items-center gap-3 text-sm">
             <span class="text-gray-600 dark:text-gray-300">
               {{ t('keys.bulkEdit.selectedCount', { count: selectedIds.length }) }}
@@ -48,18 +61,7 @@
       </template>
 
       <template #actions>
-        <div class="flex flex-wrap items-center justify-end gap-3">
-          <a
-            href="/guide.html"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="btn btn-secondary"
-            data-test="keys-guide-link"
-            :title="t('keys.usageGuide')"
-          >
-            <Icon name="document" size="md" class="mr-1.5" />
-            <span>{{ t('keys.usageGuide') }}</span>
-          </a>
+        <div class="flex justify-end gap-3">
           <button
             @click="loadApiKeys"
             :disabled="loading"
