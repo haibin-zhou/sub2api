@@ -110,3 +110,16 @@ describe('AppSidebar hidden admin entries', () => {
     expect(componentSource).toMatch(/path: '\/redeem'(?![^\n]*hidden: true)/)
   })
 })
+
+describe('AppSidebar usage guide entry', () => {
+  it('lists the usage guide right after API Keys in the shared self nav (My Account + regular users)', () => {
+    expect(componentSource).toMatch(
+      /\{ path: '\/keys', label: t\('nav\.apiKeys'\), icon: KeyIcon \},\n\s*\{ path: '\/guide\.html', label: t\('nav\.usageGuide'\), icon: BookIcon, href: '\/guide\.html' \},/
+    )
+  })
+
+  it('renders href items as a new-tab anchor instead of a router-link in both menus', () => {
+    const anchors = componentSource.match(/<a\n\s*v-if="item\.href"\n\s*:href="item\.href"\n\s*target="_blank"\n\s*rel="noopener noreferrer"/g) ?? []
+    expect(anchors.length).toBe(2)
+  })
+})
