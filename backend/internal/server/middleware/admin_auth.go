@@ -212,10 +212,16 @@ func validateJWTForAdmin(
 		return false
 	}
 
-	// 检查管理员权限
+	// 检查管理员权限；运营管理员只放行白名单接口
 	if !user.IsAdmin() {
-		AbortWithError(c, 403, "FORBIDDEN", "Admin access required")
-		return false
+		if !user.IsOperator() {
+			AbortWithError(c, 403, "FORBIDDEN", "Admin access required")
+			return false
+		}
+		if !OperatorRouteAllowed(c.Request.Method, c.FullPath()) {
+			AbortWithError(c, 403, "OPERATOR_FORBIDDEN", "运营管理员无权访问此功能")
+			return false
+		}
 	}
 
 	c.Set(string(ContextKeyUser), AuthSubject{

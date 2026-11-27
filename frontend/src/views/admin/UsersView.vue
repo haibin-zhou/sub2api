@@ -337,7 +337,7 @@
           </template>
 
           <template #cell-role="{ value }">
-            <span :class="['badge', value === 'admin' ? 'badge-purple' : 'badge-gray']">
+            <span :class="['badge', value === 'admin' ? 'badge-purple' : value === 'operator' ? 'badge-primary' : 'badge-gray']">
               {{ t('admin.users.roles.' + value) }}
             </span>
           </template>

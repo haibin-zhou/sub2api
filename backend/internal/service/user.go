@@ -75,6 +75,11 @@ func (u *User) IsAdmin() bool {
 	return u.Role == RoleAdmin
 }
 
+// IsOperator 运营管理员：可进入后台，但只能访问白名单内的接口（见 middleware.OperatorRouteAllowed）。
+func (u *User) IsOperator() bool {
+	return u.Role == RoleOperator
+}
+
 func (u *User) IsActive() bool {
 	return u.Status == StatusActive
 }

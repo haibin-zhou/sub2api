@@ -96,6 +96,11 @@ export const useAuthStore = defineStore('auth', () => {
     return user.value?.role === 'admin'
   })
 
+  // 运营管理员：可进入后台的账号/分组/订阅页面，无系统设置等权限
+  const isOperator = computed(() => {
+    return user.value?.role === 'operator'
+  })
+
   const isSimpleMode = computed(() => runMode.value === 'simple')
   const hasPendingAuthSession = computed(() => pendingAuthSession.value !== null)
 
@@ -498,6 +503,7 @@ export const useAuthStore = defineStore('auth', () => {
     // Computed
     isAuthenticated,
     isAdmin,
+    isOperator,
     isSimpleMode,
     hasPendingAuthSession,
 

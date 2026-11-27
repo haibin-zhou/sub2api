@@ -11,6 +11,7 @@ import { useAdminComplianceStore } from '@/stores/adminCompliance'
 import { useNavigationLoadingState } from '@/composables/useNavigationLoading'
 import { useRoutePrefetch } from '@/composables/useRoutePrefetch'
 import { getSetupStatus } from '@/api/setup'
+import { isOperatorAdminPath, OPERATOR_HOME_PATH } from '@/utils/operatorAccess'
 import { resolveCompletedSetupRedirectPath } from './setupRedirect'
 import { resolveRouteDocumentTitle } from './title'
 
@@ -906,14 +907,28 @@ router.beforeEach(async (to, _from, next) => {
     return
   }
 
-  // Check admin requirement
-  if (requiresAdmin && !authStore.isAdmin) {
-    // User is authenticated but not admin, redirect to user dashboard
-    next('/dashboard')
+  // 运营管理员的首页是账号管理：登录后默认跳转的 /dashboard 直接改到账号管理
+  if (authStore.isOperator && to.path === '/dashboard') {
+    next(OPERATOR_HOME_PATH)
     return
   }
 
-  if (requiresAdmin && authStore.isAdmin) {
+  // Check admin requirement
+  if (requiresAdmin && !authStore.isAdmin) {
+    // 运营管理员只放行账号/分组/订阅页面，其余后台页面（含系统设置）跳回账号管理
+    if (authStore.isOperator) {
+      if (!isOperatorAdminPath(to.path)) {
+        next(OPERATOR_HOME_PATH)
+        return
+      }
+    } else {
+      // User is authenticated but not admin, redirect to user dashboard
+      next('/dashboard')
+      return
+    }
+  }
+
+  if (requiresAdmin && (authStore.isAdmin || authStore.isOperator)) {
     const adminComplianceStore = useAdminComplianceStore()
     if (!adminComplianceStore.initialized) {
       try {

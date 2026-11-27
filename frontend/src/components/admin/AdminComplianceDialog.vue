@@ -121,7 +121,7 @@ marked.setOptions({
   gfm: true,
 })
 
-const visible = computed(() => authStore.isAuthenticated && authStore.isAdmin && complianceStore.shouldShow)
+const visible = computed(() => authStore.isAuthenticated && (authStore.isAdmin || authStore.isOperator) && complianceStore.shouldShow)
 const expectedPhrase = computed(() => complianceStore.expectedPhrase)
 const canSubmit = computed(() => typedPhrase.value.trim() === expectedPhrase.value)
 const currentDocument = computed(() => getLocale() === 'zh' ? zhDocument : enDocument)

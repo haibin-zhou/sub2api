@@ -32,7 +32,7 @@
     <!-- Navigation -->
     <nav ref="sidebarNavRef" class="sidebar-nav scrollbar-hide">
       <!-- Admin View: Admin menu first, then personal menu -->
-      <template v-if="isAdmin">
+      <template v-if="hasAdminPanel">
         <!-- Admin Section -->
         <div class="sidebar-section">
           <template v-for="item in adminNavItems" :key="item.path">
@@ -226,6 +226,7 @@ import { sanitizeSvg } from '@/utils/sanitize'
 import { sanitizeUrl } from '@/utils/url'
 import { FeatureFlags, makeSidebarFlag } from '@/utils/featureFlags'
 import { resolveSiteBillingMode } from '@/utils/siteBillingMode'
+import { isOperatorAdminPath, OPERATOR_HOME_PATH } from '@/utils/operatorAccess'
 import { useBatchImageAccess } from '@/composables/useBatchImageAccess'
 
 interface NavItem {
@@ -282,10 +283,13 @@ const { canUseBatchImage, refreshBatchImageAccess } = useBatchImageAccess()
 const sidebarCollapsed = computed(() => appStore.sidebarCollapsed)
 const mobileOpen = computed(() => appStore.mobileOpen)
 const isAdmin = computed(() => authStore.isAdmin)
+// 运营管理员也显示后台区，但菜单只保留账号/分组/订阅
+const isOperator = computed(() => authStore.isOperator)
+const hasAdminPanel = computed(() => isAdmin.value || isOperator.value)
 const sidebarNavRef = ref<HTMLElement | null>(null)
 const isDark = ref(document.documentElement.classList.contains('dark'))
 
-const homePath = computed(() => (isAdmin.value ? '/admin/dashboard' : '/dashboard'))
+const homePath = computed(() => (isAdmin.value ? '/admin/dashboard' : authStore.isOperator ? OPERATOR_HOME_PATH : '/dashboard'))
 
 // Per-group expand/collapse overrides. A group with no entry follows the
 // automatic behavior (expanded while the active route is one of its children);
@@ -896,6 +900,11 @@ const adminNavItems = computed((): NavItem[] => {
   ]
 
   const visible = applyFeatureFlags(baseItems)
+
+  // 运营管理员：只保留账号/分组/订阅，不出现系统设置与自定义后台菜单
+  if (isOperator.value) {
+    return visible.filter(item => isOperatorAdminPath(item.path))
+  }
 
   // 简单模式下，在系统设置前插入 API密钥
   if (authStore.isSimpleMode) {

@@ -14,6 +14,8 @@ const (
 const (
 	RoleAdmin = "admin"
 	RoleUser  = "user"
+	// RoleOperator 运营管理员：可登录后台，仅限账号/分组/订阅管理，无系统设置权限。
+	RoleOperator = "operator"
 )
 
 // Platform constants
