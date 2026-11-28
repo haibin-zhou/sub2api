@@ -52,10 +52,6 @@ RUN pnpm run build
 # build (emulated networking here was dropping module fetches with EOF).
 FROM --platform=${BUILDPLATFORM} ${GOLANG_IMAGE} AS backend-builder
 
-# Build arguments for version info (set by CI)
-ARG VERSION=
-ARG COMMIT=docker
-ARG DATE
 ARG GOPROXY
 ARG GOSUMDB
 # Populated by buildx from the --platform target (e.g. linux/amd64).
@@ -82,6 +78,14 @@ COPY backend/ ./
 
 # Copy frontend dist from previous stage (must be after backend copy to avoid being overwritten)
 COPY --from=frontend-builder /app/backend/internal/web/dist ./internal/web/dist
+
+# Build arguments for version info (set by CI).
+# Declared right before the build step on purpose: BuildKit folds ARG values
+# into the cache key of every later RUN, so declaring them at the top of the
+# stage made each new VERSION/COMMIT re-run apk add and go mod download.
+ARG VERSION=
+ARG COMMIT=docker
+ARG DATE
 
 # Build the binary (BuildType=release for CI builds, embed frontend)
 # Version precedence: build arg VERSION > exact git tag > cmd/server/VERSION
